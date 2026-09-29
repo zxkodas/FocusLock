@@ -64,6 +64,7 @@ STYLE = """
 QWidget { background:#1c1d20; color:#eceef1; font-size:13px; }
 
 #sidebar      { background:#161719; border-right:1px solid #2b2d31; }
+#sidebarInner { background:#161719; }
 #sidebarTitle { font-size:20px; font-weight:600; }
 #sidebarSub   { font-size:12px; color:#9ea3ab; }
 #sidebarFoot  { font-size:12px; color:#9ea3ab; }
@@ -218,6 +219,7 @@ class MainWindow(QMainWindow):
         sub.setWordWrap(True)
         brand.addWidget(sub)
         wrapper = QWidget()
+        wrapper.setObjectName("sidebarInner")
         wrapper.setLayout(brand)
         wrapper.setContentsMargins(0, 0, 0, 0)
         side.addWidget(wrapper)
