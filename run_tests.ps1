@@ -53,6 +53,18 @@ foreach ($suite in $suites) {
         Write-Host "    $($_.Line)" -ForegroundColor Red
     }
 
+    # Y el traceback. Sin esto el log de CI dice QUE test fallo pero no POR
+    # QUE, y un ERROR de import en 3.11 es indistinguible de un problema de
+    # permisos con solo ver el nombre del test. Salio de un fallo real: un
+    # commit dejo rojo el workflow y habia que adivinar.
+    $tb = $false
+    foreach ($l in $out) {
+        $s = "$l"
+        if ($s -match '^(={10,}|Traceback \(most recent call last\))') { $tb = $true }
+        if ($s -match '^(FAIL|ERROR):' -or $s -match '^(Ran |OK$|FAILED)') { $tb = $false }
+        if ($tb) { Write-Host "      $s" -ForegroundColor DarkGray }
+    }
+
     if ($code -ne 0) { $failed += $suite }
     Write-Host ""
 }
