@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import emergency as em
+from ..i18n import tr
 
 # Sesión persistente: sobrevive al cierre del diálogo.
 _SESSION: dict = {"first": None, "last": None, "keys": 0, "times": [], "draft": "", "prompts": {}}
@@ -69,6 +70,9 @@ class TrackedEdit(QTextEdit):
     def __init__(self, tracker: Tracker, placeholder: str = "") -> None:
         super().__init__()
         self._tracker = tracker
+        # Lo inyecta el dialogo al crear los editores: el editor no sabe que
+        # existe un veredicto, solo que escribieron algo.
+        self._clear_error = lambda: None
         self.setPlaceholderText(placeholder)
         self.setAcceptRichText(False)
         self.textChanged.connect(self._sync)
@@ -80,6 +84,9 @@ class TrackedEdit(QTextEdit):
     def _sync(self) -> None:
         if self.objectName() == "commitment":
             _SESSION["draft"] = self.toPlainText()
+            # Escribir de nuevo limpia el veredicto anterior: si no, el error
+            # queda pegado mientras el usuario ya lo esta corrigiendo.
+            self._clear_error()
 
 
 class EmergencyDialog(QDialog):
@@ -87,7 +94,7 @@ class EmergencyDialog(QDialog):
 
     def __init__(self, config: dict, client, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Desbloqueo de emergencia")
+        self.setWindowTitle(tr("Emergency unlock"))
         self.setModal(True)
         self.resize(760, 720)
 
@@ -98,6 +105,9 @@ class EmergencyDialog(QDialog):
         self.unlock_minutes = int(config.get("emergency", {}).get("unlock_minutes", 20))
         self.granted = None
         self._busy = False
+        # Veredicto del servicio pendiente de mostrarse. Vive aca y no en el
+        # QLabel porque _refresh() corre cada segundo y lo taparia.
+        self._error = ""
 
         self._build()
         self._restore()
@@ -106,27 +116,37 @@ class EmergencyDialog(QDialog):
         self._tick.start(1000)
         self._refresh()
 
+    def _clear_error(self) -> None:
+        """Tira el veredicto del servicio. El editor lo llama al escribir."""
+        if not self._error:
+            return
+        self._error = ""
+        self.msg.setObjectName("")
+        self._refresh()
+
     # -- construcción ------------------------------------------------------
     def _build(self) -> None:
         outer = QVBoxLayout(self)
 
         warn = QLabel(
-            f"Atent@: esto es una salida de emergencia, no un atajo. "
-            f"Desbloquea {self.unlock_minutes} minutos y queda registrado con fecha y texto. "
-            f"Releelo la próxima vez."
+            tr(
+                "Heads up: this is an emergency exit, not a shortcut. It unlocks "
+                "for {n} minutes and it is logged with a date and the text you "
+                "wrote. Read it back next time."
+            ).format(n=self.unlock_minutes)
         )
         warn.setWordWrap(True)
         warn.setObjectName("warn")
         outer.addWidget(warn)
 
-        req = QGroupBox("Requisitos")
+        req = QGroupBox(tr("Requirements"))
         form = QFormLayout(req)
         self.lbl_words = QLabel()
         self.lbl_time = QLabel()
         self.lbl_keys = QLabel()
-        form.addRow("Palabras", self.lbl_words)
-        form.addRow("Tiempo de escritura", self.lbl_time)
-        form.addRow("Pulsaciones", self.lbl_keys)
+        form.addRow(tr("Words"), self.lbl_words)
+        form.addRow(tr("Writing time"), self.lbl_time)
+        form.addRow(tr("Keystrokes"), self.lbl_keys)
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         form.addRow(self.progress)
@@ -139,32 +159,38 @@ class EmergencyDialog(QDialog):
 
         self.edits: dict[str, TrackedEdit] = {}
 
-        commit_box = QGroupBox("1. ¿Por qué necesitás desbloquear ahora?")
+        commit_box = QGroupBox(tr("1. Why do you need to unlock right now?"))
         cform = QVBoxLayout(commit_box)
-        self.commit = TrackedEdit(self._tracker, f"Mínimo {self.min_words} palabras.")
+        self.commit = TrackedEdit(
+            self._tracker, tr("At least {n} words.").format(n=self.min_words)
+        )
         self.commit.setObjectName("commitment")
         self.commit.setMinimumHeight(220)
+        self.commit._clear_error = self._clear_error
         cform.addWidget(self.commit)
         box.addWidget(commit_box)
 
         for i, (key, hint) in enumerate(em.PROMPTS, start=2):
             label = em.PROMPT_LABELS.get(key, key)
-            group = QGroupBox(f"{i}. {label}")
+            group = QGroupBox(f"{i}. {tr(label)}")
             gform = QVBoxLayout(group)
-            lbl = QLabel(hint)
+            lbl = QLabel(tr(hint))
             lbl.setWordWrap(True)
             lbl.setObjectName("hint")
             gform.addWidget(lbl)
-            edit = TrackedEdit(self._tracker, f"Mínimo {em.MIN_PROMPT_WORDS} palabras.")
+            edit = TrackedEdit(
+                self._tracker, tr("At least {n} words.").format(n=em.MIN_PROMPT_WORDS)
+            )
             edit.setObjectName(key)
             edit.setMinimumHeight(90)
             gform.addWidget(edit)
+            edit._clear_error = self._clear_error
             self.edits[key] = edit
             box.addWidget(group)
 
         self.summary = QLineEdit()
-        self.summary.setPlaceholderText("Resumen en una línea (queda en la bitácora)")
-        box.addWidget(QLabel("Resumen"))
+        self.summary.setPlaceholderText(tr("One-line summary (it goes into the log)"))
+        box.addWidget(QLabel(tr("Summary")))
         box.addWidget(self.summary)
 
         area.setWidget(holder)
@@ -176,9 +202,9 @@ class EmergencyDialog(QDialog):
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        self.btn_cancel = QPushButton("Seguir studying")
+        self.btn_cancel = QPushButton(tr("Keep studying"))
         self.btn_cancel.clicked.connect(self.reject)
-        self.btn_submit = QPushButton("Verificar y desbloquear")
+        self.btn_submit = QPushButton(tr("Verify and unlock"))
         self.btn_submit.clicked.connect(self._submit)
         buttons.addWidget(self.btn_cancel)
         buttons.addWidget(self.btn_submit)
@@ -211,14 +237,21 @@ class EmergencyDialog(QDialog):
         ready = words >= self.min_words and seconds >= self.min_minutes * 60 and prompts_ok
         self.btn_submit.setEnabled(ready and not self._busy)
         if not self._busy:
-            if words < self.min_words:
-                self.msg.setText(f"Faltan {self.min_words - words} palabras.")
+            # Si el servicio acaba de rechazar, su mensaje manda. _submit()
+            # seguido de _refresh() es el camino normal, y sin esto el
+            # veredicto se pisaba en la misma llamada: el usuario nunca veía
+            # POR QUE le rechazaron, solo "faltan N palabras". Y el aviso de
+            # texto pegado, que es el punto del ejercicio, se perdia siempre.
+            if self._error:
+                self.msg.setText(self._error)
+            elif words < self.min_words:
+                self.msg.setText(tr("{n} words left.").format(n=self.min_words - words))
             elif seconds < self.min_minutes * 60:
-                self.msg.setText("Seguí escribiendo hasta completar el tiempo.")
+                self.msg.setText(tr("Keep writing until the time is up."))
             elif not prompts_ok:
-                self.msg.setText("Completá las tres preguntas.")
+                self.msg.setText(tr("Answer all three questions."))
             else:
-                self.msg.setText("Podés verificar. El servicio va a confirmar.")
+                self.msg.setText(tr("You can verify. The service will confirm."))
 
     # -- envío -------------------------------------------------------------
     def _collect(self) -> dict:
@@ -238,12 +271,12 @@ class EmergencyDialog(QDialog):
             return
         self._busy = True
         self.btn_submit.setEnabled(False)
-        self.msg.setText("Verificando…")
+        self.msg.setText(tr("Verifying…"))
         try:
             result = self._client.call("emergency", **self._collect())
         except Exception as exc:  # noqa: BLE001
             self._busy = False
-            self.msg.setText(f"No se pudo contactar al servicio: {exc}")
+            self.msg.setText(tr("Could not reach the service: {err}").format(err=exc))
             self._refresh()
             return
 
@@ -255,7 +288,7 @@ class EmergencyDialog(QDialog):
             return
 
         self._busy = False
-        errores = result.get("errors", ["Error desconocido"])
-        self.msg.setText("Todavía no:\n" + "\n".join(f"• {e}" for e in errores))
+        errores = result.get("errors", [tr("Unknown error")])
+        self._error = tr("Not yet:\n") + "\n".join(f"• {e}" for e in errores)
         self.msg.setObjectName("err")
         self._refresh()

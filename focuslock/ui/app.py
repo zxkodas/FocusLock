@@ -79,6 +79,10 @@ QWidget { background:#1c1d20; color:#eceef1; font-size:13px; }
 QLabel#hint  { color:#9ea3ab; }
 QLabel#count { color:#eceef1; font-size:14px; font-weight:600; }
 
+/* El veredicto del servicio en el dialogo de emergencia. El rojo del boton
+   de desbloquear, con contraste suficiente sobre la tarjeta oscura. */
+QLabel#err   { color:#f2a6a0; }
+
 /* Sin esto los QLabel heredan el fondo de QWidget y se pintan como parches
    negros sobre las tarjetas #242629. */
 QLabel, QCheckBox { background:transparent; }

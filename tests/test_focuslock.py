@@ -104,6 +104,65 @@ class TestProgramRules(unittest.TestCase):
 class TestEmergency(unittest.TestCase):
     CFG = {"emergency": {"min_words": 300, "min_minutes": 5, "unlock_minutes": 20}}
 
+    # Los errores los arma el SERVICIO, que ya sabe el idioma del usuario
+    # (daemon lo fija desde la config antes de validar). Cada prueba corre en
+    # los dos idiomas: cambiar la expectativa al inglés dejaría el español
+    # sin verificar.
+    MARCA = {
+        "en": {
+            "pocas": "words short",
+            "rapido": "real writing",
+            "pegado": "clipboard",
+            "idle": "without writing",
+            "prompt": "Incomplete answer",
+            "pulsaciones": "keystrokes",
+        },
+        "es": {
+            "pocas": "palabras",
+            "rapido": "escritura real",
+            "pegado": "portapapeles",
+            "idle": "sin escribir",
+            "prompt": "Respuesta incompleta",
+            "pulsaciones": "pulsación",
+        },
+    }
+
+    def setUp(self):
+        from focuslock import i18n
+
+        self.i18n = i18n
+        self._lang_previo = i18n.lang()
+
+    def tearDown(self):
+        self.i18n.set_lang(self._lang_previo)
+
+    def _validate(self, sub, lang="en"):
+        self.i18n.set_lang(lang)
+        return em.validate(sub, self.CFG)
+
+    def _errors(self, sub):
+        """Errores que contienen una marca, en el idioma que se pide.
+
+        Devolver todos los idiomas juntos hace que una prueba falle UNA vez
+        con un mensaje util, en vez de depender de subTest.
+        """
+        v = self._validate(sub, "en")
+        return [e for e in v.errors
+                if any(m in e for m in self.MARCA["en"].values())] + [
+            e for e in self._validate(sub, "es").errors
+            if any(m in e for m in self.MARCA["es"].values())
+        ]
+
+    def _assert_error(self, sub, clave):
+        for lang, marcas in self.MARCA.items():
+            with self.subTest(lang=lang):
+                v = self._validate(sub, lang)
+                self.assertFalse(v.ok)
+                self.assertTrue(
+                    any(marcas[clave] in e for e in v.errors),
+                    f"ningun error en {lang} contiene {marcas[clave]!r}: {v.errors}",
+                )
+
     def _good(self, **kw):
         text = "palabra " * 320
         prompts = {t: "respuesta " * 35 for t, _ in em.PROMPTS}
@@ -118,37 +177,27 @@ class TestEmergency(unittest.TestCase):
     def test_too_short_rejected(self):
         s = self._good()
         s.text = "corto " * 10
-        v = em.validate(s, self.CFG)
-        self.assertFalse(v.ok)
-        self.assertTrue(any("palabras" in e for e in v.errors))
+        self._assert_error(s, "pocas")
 
     def test_too_fast_rejected(self):
         s = self._good()
         s.elapsed = 12.0
-        v = em.validate(s, self.CFG)
-        self.assertFalse(v.ok)
-        self.assertTrue(any("escritura real" in e for e in v.errors))
+        self._assert_error(s, "rapido")
 
     def test_paste_detected(self):
         s = self._good()
         s.keystrokes = 20          # 2000 caracteres en 20 pulsaciones
-        v = em.validate(s, self.CFG)
-        self.assertFalse(v.ok)
-        self.assertTrue(any("portapapeles" in e for e in v.errors))
+        self._assert_error(s, "pegado")
 
     def test_long_idle_rejected(self):
         s = self._good()
         s.longest_idle = 300.0
-        v = em.validate(s, self.CFG)
-        self.assertFalse(v.ok)
-        self.assertTrue(any("sin escribir" in e for e in v.errors))
+        self._assert_error(s, "idle")
 
     def test_incomplete_prompt_rejected(self):
         s = self._good()
         s.prompts[em.PROMPTS[0][0]] = "muy poco"
-        v = em.validate(s, self.CFG)
-        self.assertFalse(v.ok)
-        self.assertTrue(any("Respuesta incompleta" in e for e in v.errors))
+        self._assert_error(s, "prompt")
 
     def test_no_keystrokes_rejected(self):
         s = self._good()
@@ -1087,7 +1136,7 @@ class TestLockCycleBaseline(_GateCase):
         self.gate.poll()
         for t in self.client.tasks:
             t["status"] = 2
-        self.gate.poll()          #纲 las ve completadas
+        self.gate.poll()          # el las ve completadas
 
         self.gate.relock()        # activar bloqueo
         st = self.gate.poll()     # nueva siembra

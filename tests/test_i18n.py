@@ -26,6 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVOS_TRADUCIBLES = (
     "focuslock/ui/app.py",
     "focuslock/ui/emergency.py",
+    "focuslock/emergency.py",
+    "focuslock/daemon.py",
     "focuslock/__main__.py",
 )
 STUB = "focuslock/stub.py"
@@ -50,6 +52,14 @@ def _literales_tr() -> set[str]:
             for a in nodo.args:
                 if isinstance(a, ast.Constant) and isinstance(a.value, str):
                     usadas.add(a.value)
+
+    # Las tres preguntas del dialogo viven en tablas (focuslock.emergency) y
+    # llegan por tr(hint), o sea con una variable: el escaneo del AST no las
+    # ve. Son texto de UI aunque esten en el modulo de logica.
+    from focuslock import emergency as em
+
+    usadas.update(hint for _, hint in em.PROMPTS)
+    usadas.update(em.PROMPT_LABELS.values())
     return usadas
 
 
@@ -144,6 +154,32 @@ class TestStub(unittest.TestCase):
         if not m:
             return set()
         return set(re.findall(r'^\s{4}"([^"]+)"\s*:', m.group(1), re.MULTILINE))
+
+
+class TestHigieneDeTexto(unittest.TestCase):
+    """Catch-all de caracteres que no tienen nada que ver aca."""
+
+    def test_no_hay_caracteres_cjk_en_el_codigo(self):
+        """Se me colaron varias veces al escribir y siempre en comentarios.
+
+        No rompe nada, pero delata un texto que nadie leyo. Sale barato
+        revisarlo una vez por lote.
+        """
+        intrusos = []
+        for archivo in sorted((ROOT / "focuslock").rglob("*.py")):
+            for n, linea in enumerate(
+                archivo.read_text(encoding="utf-8").splitlines(), 1
+            ):
+                if re.search(r"[\u4e00-\u9fff]", linea):
+                    intrusos.append(f"{archivo.relative_to(ROOT)}:{n}")
+        self.assertEqual([], intrusos, f"caracteres CJK en: {intrusos[:5]}")
+
+    def test_el_default_de_config_es_ingles(self):
+        """La config nueva tiene que salir en ingles sin tocar nada."""
+        from focuslock import config as config_mod
+
+        defaults = config_mod.DEFAULTS["general"]
+        self.assertEqual("en", defaults["language"])
 
 
 if __name__ == "__main__":

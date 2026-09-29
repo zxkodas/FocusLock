@@ -129,7 +129,18 @@ class FakeClient:
         if command == "ticktick_set_token":
             return {"ok": True, "projects": 4, "names": ["Estudios"]}
         if command == "emergency":
-            return {"granted": False, "errors": ["Te faltan 200 palabras."], "words": 100}
+            # El servicio devuelve los errores YA traducidos (el lo sabe: lee
+            # el idioma de la config antes de validar) y la UI los muestra tal
+            # cual. Por eso aca van en español aunque la ventana este en
+            # inglés: lo que se verifica aca es que lleguen, no que se traduzcan.
+            return {
+                "granted": False,
+                "errors": [
+                    "Te faltan 200 palabras (escribiste 100 de 300).",
+                    "El texto parece pegado desde el portapapeles.",
+                ],
+                "words": 100,
+            }
         if command == "lock":
             self.locked = True
             return {"ok": True, "locked": True, "message": "Bloqueo activado."}
@@ -530,11 +541,34 @@ class TestEmergencyDialog(QtTestCase):
         self.dialog._refresh()
         self.assertFalse(self.dialog.btn_submit.isEnabled())
 
-    def test_rejected_submission_shows_errors(self):
+    def test_rejected_submission_shows_the_service_errors(self):
+        """El veredicto del servicio tiene que LLEGAR a la etiqueta.
+
+        Antes este test afirmaba 'palabras', y pasaba: _submit() escribia los
+        errores del servicio y enseguida _refresh() los pisaba con 'faltan N
+        palabras'. Dos textos con la misma palabra, y el test creia estar
+        verificando el veredicto cuando verificaba el mensaje generico.
+        """
         self.dialog.commit.setPlainText("muy corto")
         with self.patch_box():
             self.dialog._submit()
-        self.assertIn("palabras", self.dialog.msg.text())
+        texto = self.dialog.msg.text()
+        self.assertIn("200", texto, "no llega la cantidad que falta")
+        self.assertIn("escribiste", texto, "no llega el detalle del error")
+        self.assertIn("portapapeles", texto, "no llega el aviso de texto pegado")
+        self.assertEqual("err", self.dialog.msg.objectName())
+
+    def test_escribir_de_nuevo_limpia_el_veredicto(self):
+        """El error no puede quedar pegado mientras el usuario corrige."""
+        self.dialog.commit.setPlainText("muy corto")
+        with self.patch_box():
+            self.dialog._submit()
+        self.assertEqual("err", self.dialog.msg.objectName())
+
+        self.dialog.commit.setPlainText("otra cosa distinta")
+        self.dialog._refresh()
+        self.assertEqual("", self.dialog.msg.objectName())
+        self.assertNotIn("escribiste", self.dialog.msg.text())
 
     @staticmethod
     def _session_first(value: float) -> None:

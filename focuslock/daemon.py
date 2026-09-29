@@ -18,6 +18,7 @@ from typing import Any
 
 from . import config as config_mod
 from . import emergency as emergency_mod
+from . import i18n
 from . import ifeo, secrets
 from .config import Config
 from .gate import Gate
@@ -61,7 +62,12 @@ class Engine:
         killer de procesos se lleva por delante el escritorio entero.
         """
         self.config: Config = config_mod.instance()
+        # El servicio arma sus propios mensajes (los errores de la emergencia,
+        # el motivo del desbloqueo), asi que tiene que saber el idioma ANTES
+        # de que se le pida nada. La UI hace lo mismo al arrancar.
+        i18n.set_lang(self.config.get("general").get("language", "en"))
         self.store: Store = Store()
+        self._publish_language()
         self.store.read()
         self._lock = threading.RLock()
         self._stop = threading.Event()
@@ -339,8 +345,8 @@ class Engine:
         minutes = int(self.config.get("emergency").get("unlock_minutes", 20))
         self.gate.log_emergency(emergency_mod.summarize(submission, verdict))
         self.gate.unlock_now(
-            reason=f"Emergencia: compromiso escrito ({verdict.words} palabras, "
-                   f"{int(verdict.seconds // 60)} min)",
+            reason=i18n.tr("Emergency: written commitment ({w} words, {m} min)").format(
+                w=verdict.words, m=int(verdict.seconds // 60)),
             minutes=minutes,
         )
         self._sync_ifeo(force=True)
@@ -407,6 +413,16 @@ class Engine:
     def _cmd_config_get(self, req: dict) -> dict:
         return {"config": self.config.all()}
 
+    def _publish_language(self) -> None:
+        """Copia el idioma al estado.
+
+        El stub de IFEO no puede leer la config (para no tocar el token) y
+        tiene que poder escribir el aviso en el idioma del usuario. El estado
+        es lo unico que puede leer, asi que el idioma se duplica ahi.
+        """
+        self.store.set("language", i18n.lang())
+        self.store.write()
+
     def _cmd_config_set(self, req: dict) -> dict:
         section = str(req.get("section", ""))
         values = req.get("values", {}) or {}
@@ -415,6 +431,13 @@ class Engine:
         self.config.set(section, values)
         if section == "programs":
             self._sync_ifeo(force=True)
+        if section == "general":
+            # El idioma cambia dos cosas mas alla de la ventana: los mensajes
+            # que arma el servicio, y el aviso que ve el usuario cuando un
+            # programa esta bloqueado. El stub lee el idioma del estado, asi
+            # que hay que reflejarlo ahi.
+            i18n.set_lang(values.get("language", i18n.lang()))
+            self._publish_language()
         if section == "ticktick":
             status = self.gate.poll()
             return {"ok": True, "credits": status.credits, "required": status.required}

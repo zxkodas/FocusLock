@@ -22,6 +22,10 @@ DEFAULT_STATE: dict[str, Any] = {
     "lock_started": 0.0,
     "unlock_until": 0.0,
     "unlock_reason": "",
+    # Idioma del aviso de bloqueo. El servicio lo refleja desde la config
+    # (ver daemon._publish_language): el stub de IFEO no puede leer la config
+    # porque ahi esta el token, y el estado es lo unico que puede leer.
+    "language": "en",
     "lectura_status": {},      # task_id -> bool completado (para detectar transiciones)
     "lectura_titles": {},      # task_id -> titulo (para nombrar lo que desaparece)
     "credited_ids": [],        # tareas ya acreditadas: evita contar dos veces

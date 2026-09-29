@@ -19,19 +19,26 @@ IDLE_GAP_SECONDS = 45.0
 WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 PROMPTS: list[tuple[str, str]] = [
-    ("motivo", "Describí la situación concreta. ¿Es urgente de verdad o es cansancio?"),
-    ("costo", "Si el motivo real fuera quedar varado, ¿cuál es exactamente?"),
-    ("plan", "Un plan concreto y con horario. Si no podés escribirlo, no desbloquees."),
+    ("motivo", "Describe the actual situation. Is it genuinely urgent, or are you tired?"),
+    ("costo", "If the real reason were getting stuck, what exactly would it be?"),
+    ("plan", "A concrete plan with a time. If you cannot write it, do not unlock."),
 ]
 
 # El diálogo muestra títulos legibles; la clave de transporte es estable.
+# Los valores van en inglés y el diálogo los pasa por tr(); están en la tabla
+# de focuslock/i18n.py.
 PROMPT_LABELS: dict[str, str] = {
-    "motivo": "Por qué querés desbloquear ahora",
-    "costo": "Qué perdés si no lo hacés",
-    "plan": "Qué vas a hacer después",
+    "motivo": "Why you want to unlock right now",
+    "costo": "What you lose if you do not",
+    "plan": "What you are going to do afterwards",
 }
 
 MIN_PROMPT_WORDS = 30
+
+# Los errores de este modulo los arma el SERVICIO, que ya sabe el idioma del
+# usuario porque lo lee de la config (ver daemon.py). Por eso usan tr() y no
+# cadenas fijas: si no, un usuario en ingles veria los errores en espanol.
+from .i18n import tr  # noqa: E402  (al final: PROMPTS no depende de i18n)
 
 
 def count_words(text: str) -> int:
@@ -85,37 +92,42 @@ def validate(submission: EmergencySubmission, config: dict) -> EmergencyVerdict:
     if verdict.words < min_words:
         faltan = min_words - verdict.words
         verdict.errors.append(
-            f"Te faltan {faltan} palabras (escribiste {verdict.words} de {min_words})."
+            tr("You are {n} words short (you wrote {w} of {m}).").format(
+                n=faltan, w=verdict.words, m=min_words)
         )
 
     min_seconds = min_minutes * 60
     if verdict.seconds < min_seconds:
         faltan = int(min_seconds - verdict.seconds)
         verdict.errors.append(
-            f"Faltan {faltan // 60} min {faltan % 60:02d} s de escritura real "
-            f"(llevás {int(verdict.seconds // 60)} min {int(verdict.seconds % 60):02d} s)."
+            tr("{n} min {s:02d} s of real writing still to go (you have {a} min {b:02d} s).").format(
+                n=faltan // 60, s=faltan % 60,
+                a=int(verdict.seconds // 60), b=int(verdict.seconds % 60))
         )
 
     if submission.keystrokes == 0:
-        verdict.errors.append("No se registró ninguna pulsación.")
+        verdict.errors.append(tr("No keystrokes were recorded."))
     elif verdict.ratio > MAX_CHARS_PER_KEYSTROKE:
         verdict.errors.append(
-            f"El texto parece pegado desde el portapapeles "
-            f"({verdict.ratio:.1f} caracteres por pulsación). Hay que escribirlo."
+            tr("This looks pasted from the clipboard ({r:.1f} characters per "
+               "keystroke). It has to be written.").format(r=verdict.ratio)
         )
 
     if submission.longest_idle > max(IDLE_GAP_SECONDS, verdict.seconds * 0.6):
         verdict.errors.append(
-            f"Pasaste {int(submission.longest_idle // 60)} min sin escribir nada. "
-            "El tiempo de espera no cuenta si no estás escribiendo."
+            tr("You went {n} min without writing. Waiting does not count if you "
+               "are not writing.").format(n=int(submission.longest_idle // 60))
         )
 
     for key, _hint in PROMPTS:
         written = submission.prompts.get(key, "")
         if count_words(written) < MIN_PROMPT_WORDS:
             faltan = MIN_PROMPT_WORDS - count_words(written)
-            label = PROMPT_LABELS.get(key, key)
-            verdict.errors.append(f"Respuesta incompleta: '{label}' (faltan {faltan} palabras).")
+            label = tr(PROMPT_LABELS.get(key, key))
+            verdict.errors.append(
+                tr("Incomplete answer: '{label}' ({n} words short).").format(
+                    label=label, n=faltan)
+            )
 
     verdict.ok = not verdict.errors
     return verdict

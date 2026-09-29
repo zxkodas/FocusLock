@@ -314,7 +314,7 @@ class Gate:
             # eso `status` vuelve a 0 al instante y no existe una transición
             # "pendiente -> completada" que se pueda observar.
             #
-            # Se acredita por完成任务 DOS señales, porque TickTick no da una
+            # Se acredita por DOS señales, porque TickTick no da una
             # sola fiable:
             #   1. La tarea figura completada ahora (status=2 / completedTime
             #      posterior al inicio del bloqueo).
