@@ -10,6 +10,9 @@
     test_guard y test_ui matan procesos y crean ventanas reales de forma
     controlada, pero ninguno toca explorer.exe ni OpenCode.exe: esa garantia
     esta en rules.NEVER_BLOCK y hay tests que la verifican.
+
+    Sin argumentos corren las 8 suites. -Quick deja afuera test_guard, que es
+    la unica que tarda de verdad.
 #>
 [CmdletBinding()]
 param(
@@ -21,7 +24,16 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $root
 
-$suites = @("tests.test_focuslock", "tests.test_imports", "tests.test_win32", "tests.test_ui")
+# Las 8 suites. Cada una va en su propio proceso (ver .DESCRIPTION).
+$suites = @(
+    "tests.test_focuslock"
+    "tests.test_win32"
+    "tests.test_imports"
+    "tests.test_ifeo"
+    "tests.test_stub"
+    "tests.test_ui"
+    "tests.test_extension"
+)
 if (-not $Quick) { $suites += "tests.test_guard" }
 
 $failed = @()

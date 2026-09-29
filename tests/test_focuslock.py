@@ -304,21 +304,53 @@ class TestGate(_GateCase):
             self.gate.poll()
         self.assertEqual(self.store.get("credits"), 1)
 
-    def test_empty_response_does_not_seed(self):
-        """Si TickTick devuelve el proyecto vacio por un fallo transitorio, no se
-        debe tomar eso como linea base ni perder el estado anterior."""
+    def test_empty_project_counts_as_finished_work(self):
+        """Vaciar el proyecto cuenta como trabajo. Decision del usuario.
+
+        Tus tareas son recurrentes: al completarlas desaparecen del proyecto en
+        vez de quedar archivadas. Para una app asi, "el proyecto vino vacio" es
+        la senal de que terminaste, no un fallo. Si se lousha, completar TODAS
+        las tareas del proyecto no bonifica y te deja trabado sin salida
+        aparente.
+
+        El precio, asumido a conscious: si TickTick devolviera el proyecto vacio
+        por un fallo puntual, el bloqueo se abriria sin trabajo. Es el unico
+        punto ciego, y la red de seguridad sigue siendo el desbloqueo de
+        emergencia.
+        """
         self.client.tasks = [_task("a", "Lectura 1"), _task("b", "Lectura 2")]
-        self.gate.poll()
-        self.assertTrue(self.store.get("lectura_status"))
+        self.gate.relock()
+        self.gate.poll()                     # siembra: 2 pendientes
 
-        self.client.tasks = []           # respuesta vacia / fallida
+        self.client.tasks = []               # completadas las 2 -> proyecto vacio
         st = self.gate.poll()
-        self.assertNotEqual(st.error, "", "debe avisar del problema")
-        self.assertEqual(st.credits, 0)
-        # el registro anterior se conserva intacto
-        self.assertEqual(len(self.store.get("lectura_status")), 2)
 
-        # y cuando vuelve, sigue funcionando
+        self.assertEqual(st.credits, 2, "vaciar el proyecto acredita lo que hiciste")
+        self.assert_unlocked()
+        self.assertEqual(st.error, "", "no es un error, es el caso normal")
+
+    def test_empty_project_without_baseline_does_not_seed(self):
+        """Sin linea base previa, un vacio no se procesa: no hay nada que comparar.
+
+        Esta es la proteccion que sobrevive. Es la primera consulta de un ciclo:
+        si el proyecto vuelve vacioTodavia no sabemos si terminaste o fallo
+        TickTick, y no hay con que contrastar, asi que no se siembra nada ni se
+        acredita.
+        """
+        self.client.tasks = []
+        st = self.gate.poll()                 # primera consulta, sin sembrar antes
+
+        self.assertEqual(st.credits, 0, "no hay linea base: no se acredita nada")
+        self.assert_locked()
+        self.assertNotEqual(st.error, "", "pero avisa del problema")
+        self.assertEqual(self.store.get("lectura_status"), {}, "no siembra nada")
+
+    def test_recovery_after_empty_project_keeps_working(self):
+        """Si el proyecto vuelve a tener tareas, el ciclo sigue normal."""
+        self.client.tasks = [_task("a", "Lectura 1"), _task("b", "Lectura 2")]
+        self.gate.relock()
+        self.gate.poll()
+
         self.client.tasks = [_task("a", "Lectura 1"), _task("b", "Lectura 2")]
         st = self.gate.poll()
         self.assertEqual(st.error, "")

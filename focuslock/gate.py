@@ -265,9 +265,18 @@ class Gate:
             project = data.get("project") or {}
             project_name = project.get("name") or "TickTick"
 
-            # Una respuesta vacia o sin tareas no es un estado valido para tomar
-            # como linea base: siTickTick fallara, no hay que sembrar nada.
-            if not data.get("tasks"):
+            started = float(self._store.get("lock_started", 0) or 0)
+            previous: dict = dict(self._store.get("lectura_status", {}) or {})
+            previous_titles: dict = dict(self._store.get("lectura_titles", {}) or {})
+
+            # Un proyecto sin tareas es, en tu caso, la senal de que terminaste.
+            # Las tareas recurrentes desaparecen del proyecto al completarlas, asi
+            # que una lista vacia es justamente la prueba de que hubo trabajo.
+            #
+            # Solo se descarta cuando NO hay con que comparar, o sea la primera
+            # consulta de un ciclo: sin linea base previa, un vacio puede ser
+            # cualquier cosa y no hay nada que acreditar todavia.
+            if not data.get("tasks") and not (previous and started > 0):
                 self._status.error = (
                     "TickTick devolvió el proyecto sin tareas. No se tomó como base."
                 )
@@ -317,12 +326,9 @@ class Gate:
             # una tarea a mano, también cuenta. Es el precio de que TickTick no
             # exponga el estado de una tarea recurrente completada.
             # ------------------------------------------------------------------
-            started = float(self._store.get("lock_started", 0) or 0)
             gained = 0
             newly_done: list[Lectura] = []
             current: dict[str, bool] = {item.id: item.completed for item in items}
-            previous: dict = dict(self._store.get("lectura_status", {}) or {})
-            previous_titles: dict = dict(self._store.get("lectura_titles", {}) or {})
 
             credited = set(self._store.get("credited_ids", []) or [])
 
