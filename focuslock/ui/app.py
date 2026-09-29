@@ -6,12 +6,21 @@ import time
 from datetime import datetime
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import (
+    QAction,
+    QBrush,
+    QColor,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QShortcut,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -65,20 +74,17 @@ QWidget { background:#1c1d20; color:#eceef1; font-size:13px; }
 #nav::item:hover    { background:#2c2e32; color:#eceef1; }
 #nav::item:selected { background:#2f6fe0; color:#ffffff; }
 
-QGroupBox {
-  background:#242629; border:1px solid #2b2d31; border-radius:14px;
-  margin-top:14px; padding:18px; }
-QGroupBox::title {
-  subcontrol-origin: margin; left:18px; padding:0 6px;
-  color:#eceef1; font-size:15px; font-weight:600; }
-
 QLabel#hint  { color:#9ea3ab; }
 QLabel#count { color:#eceef1; font-size:14px; font-weight:600; }
 
 /* Sin esto los QLabel heredan el fondo de QWidget y se pintan como parches
    negros sobre las tarjetas #242629. */
 QLabel, QCheckBox { background:transparent; }
-QGroupBox QLabel { background:transparent; }
+
+#card { background:#242629; border-radius:14px; }
+QLabel#cardTitle { font-size:15px; font-weight:600; color:#eceef1; }
+#page { background:#1c1d20; }
+#cuerpo { background:#1c1d20; }
 
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QListWidget {
   background:#242629; color:#eceef1;
@@ -232,14 +238,33 @@ class MainWindow(QMainWindow):
         self._timer.timeout.connect(self.refresh)
         self._timer.start(8000)
 
+        # Atajos: la app se usa en un momento de tension, y buscar el boton
+        # con el mouse en ese momento es un paso de mas.
+        for secuencia, destino in (("Ctrl+L", self._toggle_lock),
+                                   ("Ctrl+E", self._emergency)):
+            atajo = QShortcut(QKeySequence(secuencia), self)
+            atajo.activated.connect(destino)
+
         self.quit_action = QAction("Salir", self)
         self.quit_action.triggered.connect(self._quit)
 
     # ------------------------------------------------------------- navegacion
     PAGINAS = ("Estado", "Programas", "Sitios", "Ajustes", "Bitácora")
 
+    SUBTITULOS = {
+        "Estado": "El bloqueo está apagado. Prendelo cuando quieras estudiar.",
+        "Programas": "Elegí qué programas no arrancan mientras el bloqueo está activo.",
+        "Sitios": "Dominios que no cargan y excepciones que siempre pasan.",
+        "Ajustes": "Token de TickTick, cuánto cuesta desbloquear y la extensión.",
+        "Bitácora": "Cada desbloqueo de emergencia y cada intento de bloqueo.",
+    }
+
     def _pagina(self, etiqueta: str) -> QWidget:
-        """Devuelve la pagina ya construida, con su titulo."""
+        """Envuelve cada pagina con su titulo y su margen.
+
+        El titulo se agrega aca y no en cada constructor: son cinco paginas y
+        el titulo es una regla del diseno, no algo de cada pantalla.
+        """
         constructor = {
             "Estado": self._tab_status,
             "Programas": self._tab_programs,
@@ -247,9 +272,41 @@ class MainWindow(QMainWindow):
             "Ajustes": self._tab_settings,
             "Bitácora": self._tab_history,
         }[etiqueta]
-        page = constructor()
-        page.setObjectName("page")
-        return page
+
+        # Estado ya trae su propio titulo y su propio margen: se usa tal cual.
+        if etiqueta == "Estado":
+            page = constructor()
+            page.setObjectName("page")
+            return page
+
+        cont = QWidget()
+        cont.setObjectName("page")
+        v = QVBoxLayout(cont)
+        v.setContentsMargins(36, 32, 36, 32)
+        v.setSpacing(18)
+
+        # Titulo y subtitulo van juntos en su propio bloque, con espaciado
+        # corto. Con el espaciado general de la pagina quedaban a doble de
+        # distancia y los dos parecian textos sueltos. Margenes negativos
+        # parecian la solucion y recortaban el subtitulo: no lo son.
+        cabecera = QVBoxLayout()
+        cabecera.setContentsMargins(0, 0, 0, 0)
+        cabecera.setSpacing(1)
+        titulo = QLabel(etiqueta)
+        titulo.setObjectName("pageTitle")
+        cabecera.addWidget(titulo)
+        sub = QLabel(self.SUBTITULOS[etiqueta])
+        sub.setObjectName("hint")
+        sub.setWordWrap(True)
+        cabecera.addWidget(sub)
+        v.addLayout(cabecera)
+
+        # El contenido de cada pagina no lleva margenes propios.
+        cuerpo = constructor()
+        cuerpo.setObjectName("cuerpo")
+        cuerpo.layout().setContentsMargins(0, 8, 0, 0)
+        v.addWidget(cuerpo, 1)
+        return cont
 
     def _ir_a(self, fila: int) -> None:
         if 0 <= fila < self.stack.count():
@@ -259,56 +316,113 @@ class MainWindow(QMainWindow):
     def _tab_status(self) -> QWidget:
         page = QWidget()
         v = QVBoxLayout(page)
+        v.setContentsMargins(36, 32, 36, 32)
+        v.setSpacing(18)
 
-        prog_box = QGroupBox("Progreso hacia el desbloqueo")
+        # Titulo y refresco en la misma fila: "Actualizar" es una accion
+        # secundaria y al lado del titulo deja de competir con las dos
+        # acciones de verdad. Titulo y subtitulo van en un bloque propio para
+        # que el subtitulo quede pegado al titulo.
+        cabecera = QVBoxLayout()
+        cabecera.setContentsMargins(0, 0, 0, 0)
+        cabecera.setSpacing(1)
+        fila_titulo = QHBoxLayout()
+        fila_titulo.setContentsMargins(0, 0, 0, 0)
+        titulo = QLabel("Estado")
+        titulo.setObjectName("pageTitle")
+        self.btn_poll = QPushButton("Actualizar TickTick ahora")
+        self.btn_poll.setObjectName("ghost")
+        self.btn_poll.setToolTip("Consultar TickTick ahora (no espera el intervalo)")
+        self.btn_poll.clicked.connect(lambda: self.refresh(force=True))
+        fila_titulo.addWidget(titulo)
+        fila_titulo.addStretch(1)
+        fila_titulo.addWidget(self.btn_poll)
+        cabecera.addLayout(fila_titulo)
+
+        self.estado_sub = QLabel()
+        self.estado_sub.setObjectName("hint")
+        self.estado_sub.setWordWrap(True)
+        cabecera.addWidget(self.estado_sub)
+        v.addLayout(cabecera)
+
+        prog_box = QWidget()
+        prog_box.setObjectName("card")
         pv = QVBoxLayout(prog_box)
+        pv.setContentsMargins(26, 20, 26, 22)
+        pv.setSpacing(10)
+
+        # Titulo del grupo y contador en la misma fila: el numero va arriba a
+        # la derecha, no encima de la barra, donde compite con el color.
+        head = QHBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        etiqueta = QLabel("Progreso hacia el desbloqueo")
+        etiqueta.setObjectName("cardTitle")
+        self.count = QLabel()
+        self.count.setObjectName("count")
+        head.addWidget(etiqueta)
+        head.addStretch(1)
+        head.addWidget(self.count)
+        pv.addLayout(head)
+
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
-        self.progress.setMinimumHeight(28)
+        self.progress.setMinimumHeight(14)
+        self.progress.setMaximumHeight(14)
+        self.progress.setTextVisible(False)
+        self.progress.setFormat("")  # el contador vive en self.count
         pv.addWidget(self.progress)
+
         self.modules = QLabel()
         self.modules.setWordWrap(True)
         self.modules.setObjectName("hint")
         pv.addWidget(self.modules)
         v.addWidget(prog_box)
 
+        # Un solo boton primario. "Actualizar" vive arriba con el titulo, asi
+        # que aca solo quedan las dos acciones de verdad.
         row = QHBoxLayout()
-        self.btn_poll = QPushButton("Actualizar TickTick ahora")
-        self.btn_poll.clicked.connect(lambda: self.refresh(force=True))
+        row.setSpacing(10)
         self.btn_toggle = QPushButton("Activar bloqueo")
         self.btn_toggle.clicked.connect(self._toggle_lock)
-        self.btn_emergency = QPushButton("Desbloqueo de emergencia…")
+        self.btn_emergency = QPushButton("Desbloqueo de emergencia")
         self.btn_emergency.setObjectName("danger")
+        self.btn_emergency.setToolTip("Ctrl+E")
         self.btn_emergency.clicked.connect(self._emergency)
-        row.addWidget(self.btn_poll)
         row.addWidget(self.btn_toggle)
-        row.addStretch(1)
         row.addWidget(self.btn_emergency)
+        row.addStretch(1)
         v.addLayout(row)
 
-        note = QLabel(
+        self.nota = QLabel(
             "El bloqueo está apagado por defecto. Prendelo cuando quieras "
             "estudiar; te vas a poder liberar con las Lecturas o con el "
             "desbloqueo de emergencia."
         )
-        note.setWordWrap(True)
-        note.setObjectName("hint")
-        v.addWidget(note)
+        self.nota.setWordWrap(True)
+        self.nota.setObjectName("hint")
+        v.addWidget(self.nota)
 
+        atajos = QWidget()
+        atajos.setObjectName("card")
+        av = QVBoxLayout(atajos)
+        av.setContentsMargins(26, 18, 26, 20)
+        av.setSpacing(4)
+        at = QLabel("Atajos")
+        at.setObjectName("cardTitle")
+        av.addWidget(at)
+        lista = QLabel("Ctrl+L  activar bloqueo        Ctrl+E  desbloqueo de emergencia")
+        lista.setObjectName("hint")
+        av.addWidget(lista)
+        v.addWidget(atajos)
+
+        v.addStretch(1)
         return page
 
     # --------------------------------------------------------------- Programas
     def _tab_programs(self) -> QWidget:
         page = QWidget()
         v = QVBoxLayout(page)
-        hint = QLabel(
-            "Se bloquea lo que esté en la lista izquierda, salvo que esté en la de "
-            "permitidos. Con IFEO activo el programa ni siquiera llega a arrancar; el "
-            "vigilante de procesos lo remata si logra colarse."
-        )
-        hint.setWordWrap(True)
-        hint.setObjectName("hint")
-        v.addWidget(hint)
+        v.setSpacing(16)
 
         split = QSplitter()
         self.prog_blocked = self._rule_list("Bloqueados", "programs", "blocked")
@@ -317,21 +431,25 @@ class MainWindow(QMainWindow):
         split.addWidget(self.prog_allowed["holder"])
         v.addWidget(split, 1)
 
-        self.ifeo_check = QCheckBox("Usar IFEO (requiere instalación con administrador)")
+        # La explicacion de IFEO va aca y no arriba: es una nota del control,
+        # no un subtitulo de la pagina (que ya dice que elegiste que bloquear).
+        self.ifeo_check = QCheckBox("Usar IFEO — el programa ni siquiera llega a arrancar")
         v.addWidget(self.ifeo_check)
+        self.ifeo_note = QLabel(
+            "Sin IFEO el bloqueo es mas suave: el vigilante de procesos lo remata "
+            "si logra colarse. Con IFEO hace falta haber instalado FocusLock como "
+            "administrador."
+        )
+        self.ifeo_note.setWordWrap(True)
+        self.ifeo_note.setObjectName("hint")
+        v.addWidget(self.ifeo_note)
         return page
 
     # ------------------------------------------------------------------ Sitios
     def _tab_sites(self) -> QWidget:
         page = QWidget()
         v = QVBoxLayout(page)
-        hint = QLabel(
-            "Dominios bloqueados por la extensión del navegador. Se aceptan nombres "
-            "sueltos: escribir 'youtube.com' alcanza para www., m., music. y shorts."
-        )
-        hint.setWordWrap(True)
-        hint.setObjectName("hint")
-        v.addWidget(hint)
+        v.setSpacing(16)
 
         split = QSplitter()
         self.site_blocked = self._rule_list("Dominios bloqueados", "sites", "blocked")
@@ -340,7 +458,11 @@ class MainWindow(QMainWindow):
         split.addWidget(self.site_allowed["holder"])
         v.addWidget(split, 1)
 
-        info = QLabel()
+        # Nota util, no subtitulo: el ejemplo de como escribir el dominio.
+        info = QLabel(
+            "Se aceptan nombres sueltos: escribir 'youtube.com' alcanza para "
+            "www., m., music. y shorts."
+        )
         info.setObjectName("hint")
         info.setWordWrap(True)
         self.site_info = info
@@ -348,11 +470,15 @@ class MainWindow(QMainWindow):
         return page
 
     def _rule_list(self, title: str, section: str, field: str) -> dict:
+        # Tarjeta: el titulo va DENTRO del marco. Afuera quedaba suelto, como
+        # un texto flotando sobre una caja que no le pertenece.
         holder = QWidget()
+        holder.setObjectName("card")
         lay = QVBoxLayout(holder)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(22, 18, 22, 20)
+        lay.setSpacing(10)
         lbl = QLabel(title)
-        lbl.setObjectName("hint")
+        lbl.setObjectName("cardTitle")
         lay.addWidget(lbl)
 
         listing = QListWidget()
@@ -366,6 +492,7 @@ class MainWindow(QMainWindow):
         lay.addWidget(entry)
 
         row = QHBoxLayout()
+        row.setSpacing(8)
         add = QPushButton("Agregar")
         add.clicked.connect(lambda: self._rule_add(section, field, listing, entry, False))
         add.setObjectName("ghost")
@@ -385,12 +512,37 @@ class MainWindow(QMainWindow):
         }
 
     # ----------------------------------------------------------------- Ajustes
+    def _card(self, titulo_texto: str) -> tuple:
+        """Tarjeta con su titulo DENTRO. Devuelve (tarjeta, layout del cuerpo).
+
+        El QGroupBox anterior dibujaba el titulo sobre el borde, que se leia
+        como una etiqueta suelta arriba de otra caja. Ademas cada pagina
+        usaba un contenedor distinto; ahora todas usan el mismo.
+        """
+        card = QWidget()
+        card.setObjectName("card")
+        outer = QVBoxLayout(card)
+        outer.setContentsMargins(22, 18, 22, 20)
+        outer.setSpacing(14)
+        t = QLabel(titulo_texto)
+        t.setObjectName("cardTitle")
+        outer.addWidget(t)
+        body = QVBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(10)
+        outer.addLayout(body)
+        return card, body
+
     def _tab_settings(self) -> QWidget:
         page = QWidget()
         v = QVBoxLayout(page)
+        v.setSpacing(16)
 
-        tt = QGroupBox("TickTick")
-        tf = QFormLayout(tt)
+        tt, tt_body = self._card("TickTick")
+        tf = QFormLayout()
+        tf.setContentsMargins(0, 0, 0, 0)
+        tf.setVerticalSpacing(12)
+        tt_body.addLayout(tf)
         self.token = QLineEdit()
         self.token.setEchoMode(QLineEdit.Password)
         self.token.setPlaceholderText("Token tp_…  (se guarda cifrado con DPAPI)")
@@ -430,8 +582,11 @@ class MainWindow(QMainWindow):
         tf.addRow("Frecuencia de consulta", self.poll_secs)
         v.addWidget(tt)
 
-        em_box = QGroupBox("Emergencia")
-        ef = QFormLayout(em_box)
+        em_box, em_body = self._card("Emergencia")
+        ef = QFormLayout()
+        ef.setContentsMargins(0, 0, 0, 0)
+        ef.setVerticalSpacing(12)
+        em_body.addLayout(ef)
         self.em_words = QSpinBox()
         self.em_words.setRange(50, 5000)
         self.em_words.setSingleStep(50)
@@ -444,8 +599,11 @@ class MainWindow(QMainWindow):
         ef.addRow("Minutos que desbloquea", self.em_unlock)
         v.addWidget(em_box)
 
-        ext = QGroupBox("Extensión del navegador")
-        xf = QFormLayout(ext)
+        ext, ext_body = self._card("Extensión del navegador")
+        xf = QFormLayout()
+        xf.setContentsMargins(0, 0, 0, 0)
+        xf.setVerticalSpacing(12)
+        ext_body.addLayout(xf)
         ext_hint = QLabel(
             "Copiá esta dirección en la página de opciones de la extensión.\n"
             "Chrome: chrome://extensions → Modo de desarrollador → Cargar descomprimida "
@@ -474,7 +632,12 @@ class MainWindow(QMainWindow):
 
         save = QPushButton("Guardar ajustes")
         save.clicked.connect(self._save_settings)
-        v.addWidget(save)
+        # A la derecha y de ancho natural: estirado a todo el ancho el boton
+        # primario de la pagina parece un banner, no una accion.
+        fila = QHBoxLayout()
+        fila.addStretch(1)
+        fila.addWidget(save)
+        v.addLayout(fila)
         v.addStretch(1)
         return page
 
@@ -482,18 +645,33 @@ class MainWindow(QMainWindow):
     def _tab_history(self) -> QWidget:
         page = QWidget()
         v = QVBoxLayout(page)
-        v.addWidget(QLabel("Desbloqueos de emergencia"))
-        self.hist_em = QPlainTextEdit()
-        self.hist_em.setReadOnly(True)
-        v.addWidget(self.hist_em, 1)
-        v.addWidget(QLabel("Intentos de bloqueo de procesos"))
-        self.hist_blocks = QPlainTextEdit()
-        self.hist_blocks.setReadOnly(True)
-        v.addWidget(self.hist_blocks, 1)
+        v.setSpacing(16)
+
+        def bloque(titulo_texto, attr) -> None:
+            card = QWidget()
+            card.setObjectName("card")
+            cv = QVBoxLayout(card)
+            cv.setContentsMargins(22, 18, 22, 20)
+            cv.setSpacing(10)
+            t = QLabel(titulo_texto)
+            t.setObjectName("cardTitle")
+            cv.addWidget(t)
+            area = QPlainTextEdit()
+            area.setReadOnly(True)
+            cv.addWidget(area, 1)
+            setattr(self, attr, area)
+            v.addWidget(card, 1)
+
+        bloque("Desbloqueos de emergencia", "hist_em")
+        bloque("Intentos de bloqueo de procesos", "hist_blocks")
+
         refresh = QPushButton("Actualizar bitácora")
         refresh.setObjectName("ghost")
         refresh.clicked.connect(self._load_history)
-        v.addWidget(refresh)
+        fila = QHBoxLayout()
+        fila.addStretch(1)
+        fila.addWidget(refresh)
+        v.addLayout(fila)
         return page
 
     # =================================================================== Datos
@@ -516,10 +694,19 @@ class MainWindow(QMainWindow):
         credits = int(data.get("credits", 0))
         if locked:
             self.progress.setValue(int(min(1.0, credits / required) * 100))
-            self.progress.setFormat(f"{credits} de {required} Lecturas")
+            self.count.setText(f"{credits} de {required} tareas")
+            faltan = max(0, required - credits)
+            self.estado_sub.setText(
+                "Te faltan "
+                + (f"{faltan} tarea" if faltan == 1 else f"{faltan} tareas")
+                + " para desbloquear."
+            )
         else:
             self.progress.setValue(100)
-            self.progress.setFormat("Desbloqueado")
+            self.count.setText("Desbloqueado")
+            self.estado_sub.setText(
+                "No hay bloqueo activo. Podés usar lo que quieras."
+            )
 
         checked = float(data.get("checked_at") or 0)
         fresh = checked > 0

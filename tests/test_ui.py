@@ -239,8 +239,28 @@ class TestMainWindow(QtTestCase):
     def test_progress_reflects_credits(self):
         self.client.locked = True
         self.window.refresh()
-        self.assertIn("1", self.window.progress.format())
+        # El numero va en la etiqueta, no encima de la barra: encima compite
+        # con el color y en el renderApproved quedaba ilegible.
+        self.assertIn("1", self.window.count.text())
         self.assertEqual(self.window.progress.value(), 50)
+        self.assertEqual(
+            self.window.progress.format(), "",
+            "la barra no debe llevar el contador dentro",
+        )
+
+    def test_the_status_subtitle_says_what_is_missing(self):
+        """El numero solo no dice si falta mucho o poco."""
+        self.client.locked = True
+        self.window.refresh()
+        self.assertIn("falta", self.window.estado_sub.text().lower())
+
+    def test_the_shortcuts_exist(self):
+        """Ctrl+L y Ctrl+E, como dice la tarjeta de atajos."""
+        from PySide6.QtGui import QShortcut
+
+        atajos = {s.key().toString() for s in self.window.findChildren(QShortcut)}
+        self.assertIn("Ctrl+L", atajos)
+        self.assertIn("Ctrl+E", atajos)
 
     def test_default_state_is_unlocked(self):
         """Abrir la app no debe activar el bloqueo."""
