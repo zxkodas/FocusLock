@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QFormLayout,
     QSpinBox,
     QSplitter,
     QStackedWidget,
@@ -172,9 +173,14 @@ class MainWindow(QMainWindow):
 
         self.banner = QLabel()
         self.banner.setWordWrap(True)
-        self.banner.setMinimumHeight(64)
+        # El estado ya esta en la barra de progreso y en el titulo de la
+        # pagina. Este aviso es solo para lo que no se ve en ningun otro
+        # lado: que el servicio murio, o que TickTick no contesta. Cuando
+        # no hay nada que avisar no ocupa nada.
+        self.banner.setMinimumHeight(0)
         self.banner.setAlignment(Qt.AlignCenter)
-        self.banner.setContentsMargins(24, 14, 24, 14)
+        self.banner.setContentsMargins(24, 10, 24, 10)
+        self.banner.hide()
         shell_layout.addWidget(self.banner)
 
         body = QWidget()
@@ -193,13 +199,23 @@ class MainWindow(QMainWindow):
         brand = QVBoxLayout()
         brand.setContentsMargins(28, 0, 24, 0)
         brand.setSpacing(0)
+        # El nombre va con su icono, en una sola fila. Solo el texto, con todo
+        # el aire de la barra alrededor, se leia como un titulo suelto.
+        linea = QHBoxLayout()
+        linea.setContentsMargins(0, 0, 0, 0)
+        linea.setSpacing(9)
+        marca = QLabel()
+        marca.setPixmap(make_icon(unlocked=True).pixmap(26, 26))
+        linea.addWidget(marca)
         title = QLabel("FocusLock")
         title.setObjectName("sidebarTitle")
+        linea.addWidget(title)
+        linea.addStretch(1)
+        brand.addLayout(linea)
+        brand.addSpacing(3)
         sub = QLabel("Frená lo que elijas hasta trabajar")
         sub.setObjectName("sidebarSub")
         sub.setWordWrap(True)
-        brand.addWidget(title)
-        brand.addSpacing(2)
         brand.addWidget(sub)
         wrapper = QWidget()
         wrapper.setLayout(brand)
@@ -558,7 +574,15 @@ class MainWindow(QMainWindow):
         row.addWidget(self.btn_token)
         row.addWidget(clear)
         row.addStretch(1)
-        tf.addRow(row)
+        row.setContentsMargins(0, 0, 0, 0)
+        # `addRow(layout)` a secas mete la fila en la sola columna de los
+        # campos y los botones quedan estrujados contra el borde. Con un
+        # widget contenedor que ocupa las dos columnas, cada boton conserva
+        # su ancho. (SpanningRole no sirve: PySide6 expone insertRow, no setRow.)
+        fila = QWidget()
+        fila.setLayout(row)
+        fila.setContentsMargins(0, 0, 0, 0)
+        tf.addRow(fila)
 
         self.project_name = QLineEdit()
         self.project_name.setPlaceholderText("Ej: Estudios")
@@ -728,8 +752,8 @@ class MainWindow(QMainWindow):
             self.modules.setText(f"TickTick: {data['error']}")
             # Un fallo de polling silencioso es como worse el bug de creditos:
             # el contador se queda en 0 y no se explica por que.
-            self.banner.setStyleSheet(self._LOCKED_STYLE)
-            self.banner.setText(
+            self.banner.setStyleSheet(self._ERROR_STYLE)
+            self._aviso(
                 "<b style='color:#e5484d'>ERROR al consultar TickTick</b><br>"
                 f"{data['error']}<br>"
                 "El contador de Lecturas no se está actualizando."
@@ -784,32 +808,34 @@ class MainWindow(QMainWindow):
         os.startfile(str(root))  # noqa: S606
         QMessageBox.information(self, "Extensiones", f"Carpeta abierta:\n{root}")
 
-    _LOCKED_STYLE = ("background:#2a0f10;border:1px solid #e5484d;"
-                     "border-radius:8px;padding:10px;")
-    _OPEN_STYLE = ("background:#0d1a14;border:1px solid #30a46c;"
-                   "border-radius:8px;padding:10px;")
+    _ERROR_STYLE = ("background:#2a0f10;border:1px solid #e5484d;"
+                    "border-radius:0px;padding:8px 24px;")
+
+    def _aviso(self, texto: str) -> None:
+        """Muestra el banner solo si hay algo que avisar."""
+        if texto:
+            self.banner.setText(texto)
+            self.banner.show()
+        else:
+            self.banner.clear()
+            self.banner.hide()
 
     def _apply_banner(self, locked: bool, offline: str = "") -> None:
+        # El estado normal NO va en el banner. Bloqueado o no se lee en el
+        # titulo de la pagina, en la barra de progreso y en el boton. Este
+        # espacio queda para lo que no se ve en ningun otro lado: que el
+        # servicio no responde o que TickTick fallo. Repetir "DESBLOQUEADO"
+        # arriba de una pagina que ya lo dice era ruido.
         if offline:
             # Sin servicio no se sabe el estado real: se avisa, no se afirma.
-            self.banner.setStyleSheet(self._LOCKED_STYLE)
-            self.banner.setText(
+            self.banner.setStyleSheet(self._ERROR_STYLE)
+            self._aviso(
                 "<b style='color:#e5484d'>SIN SERVICIO</b> — no se puede "
                 f"consultar el estado.<br>{offline}<br>"
                 "Instalalo con administrador: <code>install.ps1</code>"
             )
             return
-        if locked:
-            self.banner.setStyleSheet(self._LOCKED_STYLE)
-            self.banner.setText(
-                "<b style='color:#e5484d'>BLOQUEADO</b> — completá las Lecturas en TickTick."
-            )
-            return
-        self.banner.setStyleSheet(self._OPEN_STYLE)
-        reason = self._data.get("reason", "")
-        self.banner.setText(
-            f"<b style='color:#30a46c'>DESBLOQUEADO</b> — {reason or 'sin tareas pendientes'}"
-        )
+        self._aviso("")
 
     # ================================================================= Acciones
     def _toggle_lock(self) -> None:

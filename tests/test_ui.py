@@ -207,8 +207,33 @@ class TestMainWindow(QtTestCase):
     def test_refresh_renders_locked_state(self):
         self.client.locked = True
         self.window.refresh()
-        self.assertIn("BLOQUEADO", self.window.banner.text())
+        # El estado ya no vive en el banner: vive en el titulo de la pagina y
+        # en la barra. El banner quedo solo para lo que no se ve en otro lado.
+        self.assertIn("1", self.window.count.text())
         self.assertIn("Analisis Matematico", self.window.modules.text())
+        self.assertFalse(
+            self.window.banner.isVisibleTo(self.window),
+            "sin servicio caido ni error de TickTick el banner no se muestra",
+        )
+
+    def test_the_banner_appears_only_when_something_is_wrong(self):
+        """El estado normal no ocupa una franja entera arriba de todo.
+
+        El banner arranca oculto y solo aparece con el servicio caido o con
+        un error de TickTick. Antes decia DESBLOQUEADO siempre, sobre una
+        pagina que ya lo decia, y se llevaba ~64px de altura para eso.
+        """
+        self.client.locked = False
+        self.window.refresh()
+        self.assertFalse(self.window.banner.isVisibleTo(self.window))
+
+        self.window.client = FakeClient(available=False)
+        self.window.refresh()
+        self.assertTrue(
+            self.window.banner.isVisibleTo(self.window),
+            "sin servicio el banner tiene que avisar",
+        )
+        self.assertIn("SIN SERVICIO", self.window.banner.text())
 
     def test_task_lists_are_gone(self):
         """Las listas de pendientes/completadas se eliminaron a pedido."""
@@ -234,7 +259,9 @@ class TestMainWindow(QtTestCase):
     def test_refresh_renders_unlocked_state(self):
         self.client.locked = False
         self.window.refresh(force=True)
-        self.assertIn("DESBLOQUEADO", self.window.banner.text())
+        # Desbloqueado se lee en la barra y en el subtitulo, no en el banner.
+        self.assertIn("Desbloqueado", self.window.count.text())
+        self.assertIn("No hay bloqueo", self.window.estado_sub.text())
 
     def test_progress_reflects_credits(self):
         self.client.locked = True
@@ -266,8 +293,8 @@ class TestMainWindow(QtTestCase):
         """Abrir la app no debe activar el bloqueo."""
         self.client.locked = False
         self.window.refresh()
-        self.assertIn("DESBLOQUEADO", self.window.banner.text())
         self.assertEqual(self.window.btn_toggle.text(), "Activar bloqueo")
+        self.assertFalse(self.window.btn_emergency.isEnabled())
 
     def test_offline_does_not_claim_blocked_state(self):
         """Sin servicio no sabemos si esta bloqueado: no hay que afirmarlo."""
