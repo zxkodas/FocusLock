@@ -74,6 +74,9 @@ DEFAULTS: dict[str, Any] = {
         # haberlo pedido.
         "start_locked": False,
         "show_block_notice": True,
+        # Idioma de la interfaz. "en" por defecto; "es" disponible.
+        # OJO: cambiar esto no traduce el codigo, solo lo que ve el usuario.
+        "language": "en",
     },
 }
 

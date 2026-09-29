@@ -5,8 +5,13 @@ Cuando Windows encuentra un .exe bloqueado, lanza este stub con la linea de
 comandos original pegada atras. Mostramos el aviso y salimos: el programa
 nunca arranca.
 
-El stub lee el estado solo para saber cuantas Lecturas faltan. Si no puede
-leerlo, muestra un texto generico en vez de fallar.
+El stub lee el estado solo para saber cuantas Lecturas faltan y en que idioma
+escribir. Si no puede leerlo, muestra un texto generico en ingles en vez de
+fallar.
+
+POR QUE LAS TABLAS ESTAN DUPLICADAS: no se importa focuslock.i18n porque este
+archivo tiene que arrancar sin el paquete. Las dos copias se comparan en
+tests/test_i18n.py, asi que no pueden separarse sin que el test avise.
 """
 from __future__ import annotations
 
@@ -20,9 +25,43 @@ MB_OK = 0x00000000
 MB_ICONWARNING = 0x00000030
 MB_TOPMOST = 0x00040000
 
-TITLE = "TickFence · bloqueo activo"
+EN = {
+    "title": "TickFence - lock active",
+    "header": "This program is blocked by TickFence.",
+    "left_one": "1 Reading left in TickTick and it unlocks by itself.",
+    "left_many": "{n} Readings left in TickTick and it unlocks by itself.",
+    "done": (
+        "You finished the Readings. Open TickFence so it picks up the change "
+        "(it can take up to half a minute)."
+    ),
+    "unknown": "Finish the pending Readings in TickTick to unlock.",
+    "blocked": "Blocked program: {name}",
+    "emergency": (
+        "To unlock without finishing the Readings: open TickFence from the "
+        "Desktop shortcut, or run:\n"
+        "    python -m focuslock gui\n"
+        "and write your commitment (300 words, 5 minutes of real writing)."
+    ),
+}
 
-HEADER = "Este programa está bloqueado por TickFence."
+ES = {
+    "title": "TickFence - bloqueo activo",
+    "header": "Este programa está bloqueado por TickFence.",
+    "left_one": "Te falta 1 Lectura en TickTick y se desbloquea solo.",
+    "left_many": "Te faltan {n} Lecturas en TickTick y se desbloquea solo.",
+    "done": (
+        "Ya completaste las Lecturas. Abrí TickFence para que tome el cambio "
+        "(tarda hasta medio minuto)."
+    ),
+    "unknown": "Terminá las Lecturas pendientes en TickTick para desbloquear.",
+    "blocked": "Programa bloqueado: {name}",
+    "emergency": (
+        "Para desbloquear sin completar las Lecturas: abrí TickFence desde el "
+        "acceso directo del Escritorio, o con:\n"
+        "    python -m focuslock gui\n"
+        "y escribí tu compromiso (300 palabras, 5 minutos de escritura real)."
+    ),
+}
 
 
 def _target(argv: list[str]) -> str:
@@ -34,7 +73,7 @@ def _target(argv: list[str]) -> str:
 
 
 def _state() -> dict:
-    """Lee state.json solo para required/credits. Nunca toca el token.
+    """Lee state.json para required/credits y el idioma. Nunca toca el token.
 
     El estado vive en ProgramData. La UI no siempre esta abierta, asi que
     leerlo desde el stub es la unica forma de que el aviso diga algo util.
@@ -48,7 +87,11 @@ def _state() -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def build_message(name: str) -> str:
+def build_message(name: str, language: str = "en") -> str:
+    # Idioma desconocido cae en ingles: el aviso se muestra justo cuando algo
+    # ya va mal, no es el momento de que falle por una config rare.
+    t = ES if language == "es" else EN
+
     data = _state()
     required = data.get("required")
     credits = data.get("credits")
@@ -62,34 +105,25 @@ def build_message(name: str) -> str:
     except (TypeError, ValueError):
         credits = 0
 
-    lines = [HEADER, ""]
+    lines = [t["header"], ""]
 
     if required > 0:
         faltan = max(0, required - credits)
-        if faltan:
-            lines.append(
-                f"Te falta{'n' if faltan == 1 else 'n'} {faltan} Lectura"
-                f"{'s' if faltan != 1 else ''} en TickTick y se desbloquea solo."
-            )
+        if faltan == 1:
+            lines.append(t["left_one"])
+        elif faltan > 1:
+            lines.append(t["left_many"].format(n=faltan))
         else:
-            lines.append(
-                "Ya completaste las Lecturas. Abrí TickFence para que tome "
-                "el cambio (tarda hasta medio minuto)."
-            )
+            lines.append(t["done"])
     else:
-        lines.append("Terminá las Lecturas pendientes en TickTick para desbloquear.")
+        lines.append(t["unknown"])
 
     lines.append("")
     if name:
-        lines.append(f"Programa bloqueado: {name}")
+        lines.append(t["blocked"].format(name=name))
         lines.append("")
 
-    lines.append(
-        "Para desbloquear sin completar las Lecturas: abrí TickFence desde el "
-        "acceso directo del Escritorio, o con:\n"
-        "    python -m focuslock gui\n"
-        "y escribí tu compromiso (300 palabras, 5 minutos de escritura real)."
-    )
+    lines.append(t["emergency"])
     return "\n".join(lines)
 
 
@@ -98,9 +132,14 @@ def main() -> int:
     if "--ifeo-stub" not in argv:
         return 0
     name = _target([a for a in argv if a != "--ifeo-stub"])
+    idioma = _state().get("language", "en")
+    titulo = ES["title"] if idioma == "es" else EN["title"]
     try:
         ctypes.windll.user32.MessageBoxW(
-            None, build_message(name), TITLE, MB_OK | MB_ICONWARNING | MB_TOPMOST
+            None,
+            build_message(name, idioma if isinstance(idioma, str) else "en"),
+            titulo,
+            MB_OK | MB_ICONWARNING | MB_TOPMOST,
         )
     except Exception:
         pass

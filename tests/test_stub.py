@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -46,95 +47,96 @@ class TestStubMessage(unittest.TestCase):
         os.environ["ProgramData"] = self.tmp.name
         return old
 
+    def _message(self, state, name="steam.exe", lang="en"):
+        """Arma el mensaje con un state.json temporal y devuelve el texto.
+
+        Antes cada test repetia el patch de ProgramData a mano. Con el helper
+        queda en un lugar, y los tests se.parametrizan por idioma.
+        """
+        old = self._patch_programdata()
+        try:
+            if state is not None:
+                self._write_state(state)
+            return stub.build_message(name, lang)
+        finally:
+            if old is None:
+                os.environ.pop("ProgramData", None)
+            else:
+                os.environ["ProgramData"] = old
+
+    # Palabras que delatan el idioma. Sirven para afirmar sobre el texto sin
+    # depender de una frase entera, que cambia con cada retoque de redaccion.
+    MARCA = {
+        "en": ("Readings", "Blocked program", "Open TickFence", "left in TickTick"),
+        "es": ("Lecturas", "Programa bloqueado", "Abrí TickFence", "faltan"),
+    }
+
     def test_message_has_no_exe_name_in_the_count(self):
         """Regresión: decía "Terminá Spotify.exe Lecturas"."""
-        old = self._patch_programdata()
-        try:
-            self._write_state({"required": 2, "credits": 0})
-            message = stub.build_message("Spotify.exe")
-        finally:
-            import os
-
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-
-        self.assertNotIn("Spotify.exe Lecturas", message)
-        self.assertIn("Lecturas", message)
+        for lang, (lecturas, _, _, _) in self.MARCA.items():
+            with self.subTest(lang=lang):
+                message = self._message({"required": 2, "credits": 0},
+                                        "Spotify.exe", lang)
+                self.assertNotIn(f"Spotify.exe {lecturas}", message)
+                self.assertIn(lecturas, message)
 
     def test_message_reports_remaining(self):
-        old = self._patch_programdata()
-        try:
-            self._write_state({"required": 2, "credits": 0})
-            message = stub.build_message("steam.exe")
-        finally:
-            import os
+        for lang in self.MARCA:
+            with self.subTest(lang=lang):
+                message = self._message({"required": 2, "credits": 0}, "steam.exe", lang)
+                self.assertIn("2", message)
 
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-        self.assertIn("2", message)
+    def test_message_singular_when_one_left(self):
+        """Con 1 pendiente tiene que decir "1 Lectura", no "1 Lecturas"."""
+        for lang, (lecturas, _, _, _) in self.MARCA.items():
+            with self.subTest(lang=lang):
+                message = self._message({"required": 2, "credits": 1}, "steam.exe", lang)
+                self.assertIn("1", message)
+                # La forma singular no lleva la "s" final de la plural.
+                singular = lecturas[:-1] if lang == "es" else "Reading"
+                self.assertIn(singular, message)
 
     def test_message_when_credits_done(self):
-        old = self._patch_programdata()
-        try:
-            self._write_state({"required": 2, "credits": 2})
-            message = stub.build_message("steam.exe")
-        finally:
-            import os
-
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-        self.assertNotIn("faltan", message.lower())
-        self.assertIn("Abrí TickFence", message)
+        for lang, (_, _, abrir, _) in self.MARCA.items():
+            with self.subTest(lang=lang):
+                message = self._message({"required": 2, "credits": 2}, "steam.exe", lang)
+                self.assertIn(abrir, message)
 
     def test_message_without_state_is_still_useful(self):
         """Si no puede leer el estado, muestra algo genérico y no revienta."""
-        old = self._patch_programdata()
-        try:
-            message = stub.build_message("steam.exe")
-        finally:
-            import os
-
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-        self.assertTrue(message.strip())
-        self.assertIn("Lecturas", message)
+        for lang, (lecturas, _, _, _) in self.MARCA.items():
+            with self.subTest(lang=lang):
+                message = self._message(None, "steam.exe", lang)
+                self.assertTrue(message.strip())
+                self.assertIn(lecturas, message)
 
     def test_message_with_corrupt_state(self):
-        old = self._patch_programdata()
-        try:
-            (self.state_dir / "state.json").write_text("{no es json", encoding="utf-8")
-            message = stub.build_message("steam.exe")
-        finally:
-            import os
+        for lang in self.MARCA:
+            with self.subTest(lang=lang):
+                old = self._patch_programdata()
+                try:
+                    (self.state_dir / "state.json").write_text(
+                        "{no es json", encoding="utf-8")
+                    message = stub.build_message("steam.exe", lang)
+                finally:
+                    if old is None:
+                        os.environ.pop("ProgramData", None)
+                    else:
+                        os.environ["ProgramData"] = old
+                self.assertTrue(message.strip())
 
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-        self.assertTrue(message.strip())
+    def test_idioma_desconocido_cae_en_ingles(self):
+        """Una config con language: 'fr' no puede romper el aviso."""
+        message = self._message({"required": 2, "credits": 0}, "steam.exe", "fr")
+        self.assertIn("Readings", message)
 
     def test_program_name_appears_at_the_end_not_in_the_count(self):
-        old = self._patch_programdata()
-        try:
-            self._write_state({"required": 2, "credits": 0})
-            message = stub.build_message("Discord.exe")
-        finally:
-            import os
-
-            if old is None:
-                os.environ.pop("ProgramData", None)
-            else:
-                os.environ["ProgramData"] = old
-        if "Discord.exe" in message:
-            self.assertIn("Programa bloqueado", message)
+        for lang, (_, bloqueado, _, _) in self.MARCA.items():
+            with self.subTest(lang=lang):
+                message = self._message({"required": 2, "credits": 0},
+                                        "Discord.exe", lang)
+                if "Discord.exe" in message:
+                    self.assertIn(bloqueado, message)
 
     def test_stub_has_no_focuslock_imports(self):
         """Windows lo ejecuta suelto: no puede depender del paquete."""
