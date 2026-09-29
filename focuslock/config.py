@@ -60,7 +60,6 @@ DEFAULTS: dict[str, Any] = {
         "allowed": [
             "docs.python.org",
             "stackoverflow.com",
-            "upt.edu.ar",
         ],
     },
     "emergency": {

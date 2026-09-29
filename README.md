@@ -78,7 +78,7 @@ every one of them in *Ajustes*.
 | Minimum typing time | **5 min** | 1–120 | Anti-paste, anti-"I'll do it later" |
 | Escape hatch duration | **20 min** | 1–480 | How long the emergency unlock lasts |
 | Blocked programs | *(empty)* | — | What stops launching |
-| Blocked sites | *(empty)* | — | What stops loading |
+| Blocked sites | YouTube, Reddit, Instagram, X, Twitter, Twitch, Netflix, TikTok | — | What stops loading |
 | Enable IFEO (hard block) | **on** | — | Turn it off and only the soft guard works |
 
 **A gentle setup:** 1 task, 100 words, 1 minute.
