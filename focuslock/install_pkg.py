@@ -35,7 +35,7 @@ def install() -> int:
     if result.returncode != 0:
         print(f"  FALLO pip install:\n{result.stdout}\n{result.stderr}")
         return 1
-    print("  focuslock instalado en site-packages")
+    print("  TickFence instalado en site-packages")
 
     # 2) Verificar que un interprete limpio lo encuentre desde otro directorio.
     check = subprocess.run(

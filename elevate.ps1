@@ -24,8 +24,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$log = Join-Path $env:TEMP "focuslock-elevated.log"
-$errLog = Join-Path $env:TEMP "focuslock-elevated.err"
+$log = Join-Path $env:TEMP "tickfence-elevated.log"
+$errLog = Join-Path $env:TEMP "tickfence-elevated.err"
 
 # El token viaja por variable de entorno, no por linea de comandos: asi no queda
 # en el historial de PowerShell ni en la lista de procesos.

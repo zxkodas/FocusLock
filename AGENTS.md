@@ -41,6 +41,12 @@ pipe and the HTTP server do not — that separation is the design.
   working directory at `C:\Windows\System32` and no `PYTHONPATH`.** The package
   must be pip-installed into site-packages or the service cannot import it. If
   the project folder moves, re-run it.
+- **Two copies of the code exist, and they drift.** site-packages is what the
+  Windows service and any launch whose working directory is not the project
+  import. After editing, `python -m focuslock.install_pkg` refreshes it; the
+  shortcut's working directory already points at the project, so a desktop
+  launch sees edits immediately. Symptom of forgetting: the change "does
+  nothing" and the render looks correct.
 - **`gate.py` is deliberately I/O-free**: it takes a client and a store, so the
   whole unlock decision is testable without a network. Keep it that way.
 - The extension polls `http://127.0.0.1:47821/state?token=…`. The port is a
