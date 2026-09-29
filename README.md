@@ -16,6 +16,7 @@ You decide how hard the emergency exit is to push.
 ![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![gui](https://img.shields.io/badge/GUI-PySide6-2D8BC0)
 ![tests](https://img.shields.io/badge/tests-234%20passing-16A34A)
+![ci](https://github.com/zxkodas/TickFence/actions/workflows/tests.yml/badge.svg)
 ![chrome](https://img.shields.io/badge/Chrome%20%2F%20Edge%20%2F%20Brave-MV3-4285F4?logo=googlechrome&logoColor=white)
 ![firefox](https://img.shields.io/badge/Firefox-MV3-FF7139F?logo=firefoxbrowser&logoColor=white)
 ![service](https://img.shields.io/badge/enforcement-Windows%20Service%20%2B%20IFEO-6E7681)
