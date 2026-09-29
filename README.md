@@ -492,6 +492,10 @@ know. Not an obligation — just a thing that makes the work worth doing.
 
 ## 📝 Notes
 
-- This README is in English, but the **GUI and the code comments are in
-  Spanish**. The tabs are `Estado`, `Programas`, `Sitios`, `Ajustes` and
-  `Bitácora`.
+- The interface ships in **English**; switch it in *Settings → Language*, and
+  the app restarts. Code comments and docstrings are in **Spanish**, and this
+  README is in **English**. That is deliberate, not an oversight.
+- The browser extension follows your **system** language instead, because it
+  does not read TickFence's config.
+- Want to help? [`CONTRIBUTING.md`](CONTRIBUTING.md) has the rules that
+  exist because breaking them took the author's desktop down.
