@@ -496,6 +496,75 @@ class TestTrayApp(QtTestCase):
             app.qt.quit()
 
 
+class TestStyleContrast(unittest.TestCase):
+    """El contraste de la hoja de estilo, medido. No estimado a ojo.
+
+    Los valores salieron de calcularlos, no de elegirlos. Este test existe
+    para que un cambio de color "que se ve bien" no rompa la accesibilidad
+    en silencio: dos de estos ratios estaban por debajo del minimo.
+    """
+
+    # (nombre, primer plano, fondo, minimo WCAG AA)
+    CASES = (
+        ("texto normal sobre fondo", "#e6e8ee", "#15171c", 4.5),
+        ("texto normal sobre superficie", "#e6e8ee", "#1b1e25", 4.5),
+        ("texto secundario sobre fondo", "#8f98ad", "#15171c", 4.5),
+        ("texto secundario sobre superficie", "#8f98ad", "#1b1e25", 4.5),
+        ("blanco sobre primario", "#ffffff", "#2a6df4", 4.5),
+        ("blanco sobre hover del primario", "#ffffff", "#2560d8", 4.5),
+        ("blanco sobre peligro", "#ffffff", "#b3402f", 4.5),
+        ("borde sobre fondo", "#656f88", "#15171c", 3.0),
+        ("borde sobre superficie", "#656f88", "#1b1e25", 3.0),
+    )
+
+    @staticmethod
+    def _luminance(hex_color: str) -> float:
+        h = hex_color.lstrip("#")
+        channels = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        channels = [
+            c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+            for c in channels
+        ]
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+    @classmethod
+    def _ratio(cls, fg: str, bg: str) -> float:
+        a, b = cls._luminance(fg), cls._luminance(bg)
+        hi, lo = max(a, b), min(a, b)
+        return (hi + 0.05) / (lo + 0.05)
+
+    def test_every_pair_meets_its_minimum(self):
+        for name, fg, bg, minimum in self.CASES:
+            with self.subTest(par=name):
+                value = self._ratio(fg, bg)
+                self.assertGreaterEqual(
+                    value, minimum,
+                    f"{name}: {value:.2f}:1 con {fg} sobre {bg}, "
+                    f"por debajo del minimo {minimum}:1",
+                )
+
+    def test_hover_does_not_reduce_contrast(self):
+        """Pasar el mouse no puede empeorar la legibilidad.
+
+        El hover solia aclarar el azul (#3b7bf5) y el texto blanco caia a
+        3.93:1. Oscurecer es lo correcto.
+        """
+        resting = self._ratio("#ffffff", "#2a6df4")
+        hover = self._ratio("#ffffff", "#2560d8")
+        self.assertGreater(hover, resting)
+
+    def test_the_measured_colors_are_in_the_stylesheet(self):
+        """Si cambia la hoja, este test hay que actualizarlo, y se nota."""
+        from focuslock.ui.app import STYLE
+
+        sheet = STYLE.lower()
+        for _, fg, _bg, _minimum in self.CASES:
+            if fg == "#ffffff":
+                continue  # el blanco viene de `color:white`, no de un hex
+            with self.subTest(color=fg):
+                self.assertIn(fg, sheet)
+
+
 class TestIcon(unittest.TestCase):
     def test_icon_renders_both_states(self):
         from focuslock.ui.app import make_icon

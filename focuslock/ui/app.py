@@ -34,23 +34,36 @@ from PySide6.QtWidgets import (
 from ..ipc import IpcClient
 from .emergency import EmergencyDialog
 
+# Los colores de esta hoja no se eligen a ojo: hay ratios medidos.
+#
+#   texto  #e6e8ee sobre fondo #15171c       14.64:1   (pide 4.5)
+#   hint   #8f98ad sobre fondo #15171c        6.20:1   (pide 4.5)
+#   blanco sobre primario #2a6df4            4.57:1   (pide 4.5)
+#   blanco sobre hover    #2560d8            5.61:1   (pide 4.5)
+#   borde  #656f88 sobre #15171c / #1b1e25    3.57:1 / 3.32:1  (pide 3, borde)
+#
+# El hover OSCURECE a proposito: aclarar el azul lo aleja del blanco y
+# dejaba el texto en 3.93:1, por debajo del minimo. El borde subio de
+# #656f88 porque el anterior daba 1.24:1 y los campos de texto quedaban
+# dibujados por una linea casi invisible.
+# tests/test_ui.py::TestStyleContrast falla si alguno de estos numeros se mueve.
 STYLE = """
 QWidget { background:#15171c; color:#e6e8ee; font-size:13px; }
-QGroupBox { border:1px solid #2a2f3a; border-radius:8px; margin-top:14px; padding:10px; }
+QGroupBox { border:1px solid #656f88; border-radius:8px; margin-top:14px; padding:10px; }
 QGroupBox::title { subcontrol-origin: margin; left:10px; color:#8f98ad; }
 QLabel#hint { color:#8f98ad; }
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QListWidget {
-  background:#1b1e25; border:1px solid #2a2f3a; border-radius:6px; padding:6px; }
+  background:#1b1e25; border:1px solid #656f88; border-radius:6px; padding:6px; }
 QPushButton { background:#2a6df4; border:none; border-radius:6px; padding:8px 14px; color:white; }
-QPushButton:hover { background:#3b7bf5; }
+QPushButton:hover { background:#2560d8; }
 QPushButton:disabled { background:#333842; color:#6b7280; }
 QPushButton#danger { background:#b3402f; }
 QPushButton#ghost { background:#242832; }
-QTabWidget::pane { border:1px solid #2a2f3a; border-radius:8px; }
+QTabWidget::pane { border:1px solid #656f88; border-radius:8px; }
 QTabBar::tab { background:#1b1e25; padding:9px 18px; border-top-left-radius:6px;
                border-top-right-radius:6px; }
 QTabBar::tab:selected { background:#2a6df4; color:white; }
-QProgressBar { border:1px solid #2a2f3a; border-radius:6px; text-align:center; background:#1b1e25; }
+QProgressBar { border:1px solid #656f88; border-radius:6px; text-align:center; background:#1b1e25; }
 QProgressBar::chunk { background:#2a6df4; border-radius:5px; }
 """
 
