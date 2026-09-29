@@ -15,6 +15,20 @@ START_MENU = Path(__import__("os").environ.get("APPDATA", "")) / (
 DESKTOP = Path(__import__("os").environ.get("USERPROFILE", "")) / "Desktop"
 
 
+def _project_dir() -> Path | None:
+    """Carpeta del proyecto si se esta corriendo desde el codigo fuente.
+
+    El acceso directo arranca con la carpeta del usuario como directorio de
+    trabajo, y ahi `focuslock` resuelve desde site-packages, no desde el
+    proyecto. Consecuencia: un cambio en el codigo no se ve en el acceso
+    directo hasta reinstalar el paquete, y el sintoma es "arregle algo y no
+    paso nada". Con el directorio de trabajo puesto en el proyecto, el acceso
+    directo ve el codigo que se acaba de editar.
+    """
+    raiz = Path(__file__).resolve().parents[1]
+    return raiz if (raiz / "pyproject.toml").exists() else None
+
+
 def _icon_path() -> Path:
     """Donde vive el .ico de la app.
 
@@ -41,6 +55,19 @@ def _launcher() -> tuple[str, str]:
     if getattr(sys, "frozen", False):
         return sys.executable, ""
     return sys.executable, "-m focuslock gui"
+
+
+def _project_dir() -> Path | None:
+    """Carpeta del proyecto si estamos corriendo desde el codigo fuente.
+
+    El servicio y la GUI comparten el mismo codigo instalado en
+    site-packages, pero mientras se desarrolla conviene que el acceso directo
+    apunte al proyecto: si no, cada cambio exige reinstalar el paquete a mano.
+    """
+    raiz = Path(__file__).resolve().parents[1]
+    if (raiz / "pyproject.toml").exists():
+        return raiz
+    return None
 
 
 # Nombres de acceso de versiones anteriores. Tras un rebrandeo quedan los
@@ -84,7 +111,14 @@ def create_shortcuts() -> list[Path]:
             link.SetPath(target)
             link.SetArguments(args)
             link.SetDescription("TickFence - bloqueador de foco")
-            link.SetWorkingDirectory(str(Path.home()))
+            # El directorio de trabajo decide de que carpeta importa el paquete.
+            # Con la carpeta del usuario, `python -m focuslock` carga la copia
+            # de site-packages, que es la del ultimo install: los cambios del
+            # proyecto no se verian hasta reinstalar.
+            proyecto = _project_dir()
+            link.SetWorkingDirectory(
+                str(proyecto) if proyecto is not None else str(Path.home())
+            )
             # Sin icono propio, Windows muestra el de python.exe: en el Menu
             # Inicio y en la busqueda se ve algo que no es la app.
             icono = _icon_path()
