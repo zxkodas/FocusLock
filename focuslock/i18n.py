@@ -95,6 +95,88 @@ ES: dict[str, str] = {
     "Emergency: written commitment ({w} words, {m} min)": (
         "Emergencia: compromiso escrito ({w} palabras, {m} min)"
     ),
+    # -- navegacion ---------------------------------------------------------
+    "Status": "Estado",
+    "Programs": "Programas",
+    "Sites": "Sitios",
+    "Settings": "Ajustes",
+    "Log": "Bitácora",
+    "Service: LocalSystem": "Servicio: LocalSystem",
+    "Stop the things you picked, until you work": (
+        "Frená lo que elijas hasta trabajar"
+    ),
+    "The lock is off. Turn it on when you are ready to study.": (
+        "El bloqueo está apagado. Prendelo cuando quieras estudiar."
+    ),
+    "Programs that will not start while the lock is active.": (
+        "Elegí qué programas no arrancan mientras el bloqueo está activo."
+    ),
+    "Domains that will not load, and the ones that always pass.": (
+        "Dominios que no cargan y excepciones que siempre pasan."
+    ),
+    "Your TickTick token, what it costs to unlock, the extension.": (
+        "Token de TickTick, cuánto cuesta desbloquear y la extensión."
+    ),
+    "Every emergency unlock and every blocked process.": (
+        "Cada desbloqueo de emergencia y cada intento de bloqueo."
+    ),
+    "Quit": "Salir",
+    # -- ventana principal --------------------------------------------------
+    "Turn on the lock": "Activar bloqueo",
+    "turn on the lock": "activar bloqueo",
+    "emergency unlock": "desbloqueo de emergencia",
+    "Shortcuts": "Atajos",
+    (
+        "The lock is off by default. Turn it on when you want to study; "
+        "you can get out of it with the Readings or with the emergency unlock."
+    ): (
+        "El bloqueo está apagado por defecto. Prendelo cuando quieras "
+        "estudiar; te vas a poder liberar con las Lecturas o con el "
+        "desbloqueo de emergencia."
+    ),
+    # -- Ajustes ------------------------------------------------------------
+    "Token tp_…  (stored encrypted with DPAPI)": "Token tp_…  (se guarda cifrado con DPAPI)",
+    "Token": "Token",
+    "Test connection and save": "Probar conexión y guardar",
+    "Clear token": "Borrar token",
+    "E.g: Studies": "Ej: Estudios",
+    "TickTick project": "Proyecto de TickTick",
+    (
+        "Any task in the project counts; the name is not looked at. Tick off "
+        "2 tasks in TickTick and it unlocks."
+    ): (
+        "Se cuenta cualquier tarea del proyecto, sin mirar el nombre. "
+        "Tachá 2 tareas en TickTick y se desbloquea."
+    ),
+    "Readings needed": "Lecturas necesarias",
+    "Poll interval": "Frecuencia de consulta",
+    "Language": "Idioma",
+    "Interface language": "Idioma de la interfaz",
+    "Changing this restarts the window. Your token and settings stay.": (
+        "Cambiar esto reinicia la ventana. Tu token y tus ajustes se conservan."
+    ),
+    "Emergency": "Emergencia",
+    "Minimum words": "Palabras mínimas",
+    "Writing minutes": "Minutos de escritura",
+    "Minutes it unlocks for": "Minutos que desbloquea",
+    "Browser extension": "Extensión del navegador",
+    (
+        "Paste this address into the extension's options page.\n"
+        "Chrome: chrome://extensions → Developer mode → Load unpacked "
+        "→ the extension/chrome folder.\n"
+        "Firefox: about:debugging#/runtime/this-firefox → Load Temporary "
+        "Add-on → extension/firefox/manifest.json"
+    ): (
+        "Copiá esta dirección en la página de opciones de la extensión.\n"
+        "Chrome: chrome://extensions → Modo de desarrollador → Cargar descomprimida "
+        "→ carpeta extension/chrome.\n"
+        "Firefox: about:debugging#/runtime/this-firefox → Cargar complemento temporal "
+        "→ extension/firefox/manifest.json"
+    ),
+    "Address": "Dirección",
+    "Copy address": "Copiar dirección",
+    "Open extension folder": "Abrir carpeta de la extensión",
+    "Save settings": "Guardar ajustes",
 }
 
 

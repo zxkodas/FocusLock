@@ -20,6 +20,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -41,6 +42,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import i18n
+from ..i18n import tr
 from ..ipc import IpcClient
 from .emergency import EmergencyDialog
 
@@ -164,6 +167,26 @@ class MainWindow(QMainWindow):
         self.resize(880, 640)
         self.setWindowIcon(make_icon())
 
+        # El idioma se fija ANTES de construir nada: los textos van hardcodeados
+        # en los constructores, no se recalculan despues. Si se hiciera aca
+        # abajo, habria que reconstruir la ventana entera para cambiar el
+        # idioma. Por eso el cambio de idioma reinicia la ventana.
+        self._set_language_from_client()
+
+    def _set_language_from_client(self) -> None:
+        """Lee el idioma de la config. Si no puede, se queda en ingles.
+
+        El default de i18n ya es ingles, asi que un servicio caido no rompe la
+        ventana: se abre en ingles y listo.
+        """
+        try:
+            cfg = self.client.call("config_get").get("config", {})
+        except Exception:  # noqa: BLE001
+            return
+        self._idioma = i18n.set_lang(
+            (cfg.get("general") or {}).get("language", "en")
+        )
+
         root = QWidget()
         self.setCentralWidget(root)
         outer = QHBoxLayout(root)
@@ -218,7 +241,7 @@ class MainWindow(QMainWindow):
         linea.addStretch(1)
         brand.addLayout(linea)
         brand.addSpacing(3)
-        sub = QLabel("Frená lo que elijas hasta trabajar")
+        sub = QLabel(tr("Stop the things you picked, until you work"))
         sub.setObjectName("sidebarSub")
         sub.setWordWrap(True)
         brand.addWidget(sub)
@@ -235,12 +258,12 @@ class MainWindow(QMainWindow):
         self.nav.setFocusPolicy(Qt.StrongFocus)
         self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         for etiqueta in self.PAGINAS:
-            self.nav.addItem(etiqueta)
+            self.nav.addItem(tr(self.ETIQUETAS[etiqueta]))
         self.nav.setCurrentRow(0)
         self.nav.currentRowChanged.connect(self._ir_a)
         side.addWidget(self.nav, 1)
 
-        foot = QLabel("Servicio: LocalSystem")
+        foot = QLabel(tr("Service: LocalSystem"))
         foot.setObjectName("sidebarFoot")
         foot.setContentsMargins(28, 0, 0, 0)
         side.addWidget(foot)
@@ -267,19 +290,77 @@ class MainWindow(QMainWindow):
             atajo = QShortcut(QKeySequence(secuencia), self)
             atajo.activated.connect(destino)
 
-        self.quit_action = QAction("Salir", self)
+        self.quit_action = QAction(tr("Quit"), self)
         self.quit_action.triggered.connect(self._quit)
 
     # ------------------------------------------------------------- navegacion
-    PAGINAS = ("Estado", "Programas", "Sitios", "Ajustes", "Bitácora")
+    # Las claves son IDs estables, NO las etiquetas visibles. Antes la etiqueta
+    # hacia doble trabajo: era el nombre del menu y la clave de los diccionarios
+    # de arriba. Traducirla rompia el indexado, y un typo en el menu rompia el
+    # lookup en silencio. Ahora el ID no se traduce y la etiqueta si.
+    PAGINAS = ("estado", "programas", "sitios", "ajustes", "bitacora")
+
+    ETIQUETAS = {
+        "estado": "Status",
+        "programas": "Programs",
+        "sitios": "Sites",
+        "ajustes": "Settings",
+        "bitacora": "Log",
+    }
 
     SUBTITULOS = {
-        "Estado": "El bloqueo está apagado. Prendelo cuando quieras estudiar.",
-        "Programas": "Elegí qué programas no arrancan mientras el bloqueo está activo.",
-        "Sitios": "Dominios que no cargan y excepciones que siempre pasan.",
-        "Ajustes": "Token de TickTick, cuánto cuesta desbloquear y la extensión.",
-        "Bitácora": "Cada desbloqueo de emergencia y cada intento de bloqueo.",
+        "estado": "The lock is off. Turn it on when you are ready to study.",
+        "programas": "Programs that will not start while the lock is active.",
+        "sitios": "Domains that will not load, and the ones that always pass.",
+        "ajustes": "Your TickTick token, what it costs to unlock, the extension.",
+        "bitacora": "Every emergency unlock and every blocked process.",
     }
+
+    def _change_language(self, _indice: int) -> None:
+        """Cambia el idioma y reinicia la ventana.
+
+        Se guarda primero, y recien despues se reinicia: si el guardado falla
+        el servicio esta caido, la ventana queda en el idioma nuevo pero el
+        proximo arranque vuelve al viejo, y no hay nada que explicar.
+
+        La ventana se reconstruye en vez de re-etiquetar porque los textos van
+        en los constructores. Recorrer el arbol cambiando textos es mas
+        codigo del que vale, y es el tipo de cosa que se olvida actualizar.
+        """
+        codigo = self.lang_combo.currentData()
+        if not codigo or codigo == getattr(self, "_idioma", "en"):
+            return
+        try:
+            self.client.call("config_set", section="general", values={"language": codigo})
+        except Exception:  # noqa: BLE001
+            self.lang_combo.blockSignals(True)
+            self.lang_combo.setCurrentIndex(
+                self.lang_combo.findData(getattr(self, "_idioma", "en"))
+            )
+            self.lang_combo.blockSignals(False)
+            return
+        i18n.set_lang(codigo)
+        self.rebuild_for_language()
+
+    def rebuild_for_language(self) -> None:
+        """Cierra la ventana y abre otra en el idioma actual.
+
+        Se pierde el texto a medio escribir de la emergencia, si lo hubiera:
+        el dialogo es modal, asi que desde Ajustes no puede estar abierto a la
+        vez. La sesion de escritura vive en un modulo, no en la ventana, asi
+        que sobrevive igual.
+        """
+        from PySide6.QtWidgets import QApplication
+
+        QApplication.instance().processEvents()
+        pos = self.pos()
+        self.close()
+        nueva = MainWindow(self.client)
+        nueva.resize(self.size())
+        nueva.move(pos)
+        nueva.show()
+        self._replacement = nueva  # evitar que se recolecte
+        self.deleteLater()
 
     def _pagina(self, etiqueta: str) -> QWidget:
         """Envuelve cada pagina con su titulo y su margen.
@@ -288,15 +369,15 @@ class MainWindow(QMainWindow):
         el titulo es una regla del diseno, no algo de cada pantalla.
         """
         constructor = {
-            "Estado": self._tab_status,
-            "Programas": self._tab_programs,
-            "Sitios": self._tab_sites,
-            "Ajustes": self._tab_settings,
-            "Bitácora": self._tab_history,
+            "estado": self._tab_status,
+            "programas": self._tab_programs,
+            "sitios": self._tab_sites,
+            "ajustes": self._tab_settings,
+            "bitacora": self._tab_history,
         }[etiqueta]
 
         # Estado ya trae su propio titulo y su propio margen: se usa tal cual.
-        if etiqueta == "Estado":
+        if etiqueta == "estado":
             page = constructor()
             page.setObjectName("page")
             return page
@@ -314,10 +395,10 @@ class MainWindow(QMainWindow):
         cabecera = QVBoxLayout()
         cabecera.setContentsMargins(0, 0, 0, 0)
         cabecera.setSpacing(1)
-        titulo = QLabel(etiqueta)
+        titulo = QLabel(tr(self.ETIQUETAS[etiqueta]))
         titulo.setObjectName("pageTitle")
         cabecera.addWidget(titulo)
-        sub = QLabel(self.SUBTITULOS[etiqueta])
+        sub = QLabel(tr(self.SUBTITULOS[etiqueta]))
         sub.setObjectName("hint")
         sub.setWordWrap(True)
         cabecera.addWidget(sub)
@@ -350,7 +431,7 @@ class MainWindow(QMainWindow):
         cabecera.setSpacing(1)
         fila_titulo = QHBoxLayout()
         fila_titulo.setContentsMargins(0, 0, 0, 0)
-        titulo = QLabel("Estado")
+        titulo = QLabel(tr("Status"))
         titulo.setObjectName("pageTitle")
         self.btn_poll = QPushButton("Actualizar TickTick ahora")
         self.btn_poll.setObjectName("ghost")
@@ -404,9 +485,9 @@ class MainWindow(QMainWindow):
         # que aca solo quedan las dos acciones de verdad.
         row = QHBoxLayout()
         row.setSpacing(10)
-        self.btn_toggle = QPushButton("Activar bloqueo")
+        self.btn_toggle = QPushButton(tr("Turn on the lock"))
         self.btn_toggle.clicked.connect(self._toggle_lock)
-        self.btn_emergency = QPushButton("Desbloqueo de emergencia")
+        self.btn_emergency = QPushButton(tr("Emergency unlock"))
         self.btn_emergency.setObjectName("danger")
         self.btn_emergency.setToolTip("Ctrl+E")
         self.btn_emergency.clicked.connect(self._emergency)
@@ -416,9 +497,11 @@ class MainWindow(QMainWindow):
         v.addLayout(row)
 
         self.nota = QLabel(
-            "El bloqueo está apagado por defecto. Prendelo cuando quieras "
-            "estudiar; te vas a poder liberar con las Lecturas o con el "
-            "desbloqueo de emergencia."
+            tr(
+                "The lock is off by default. Turn it on when you want to study; "
+                "you can get out of it with the Readings or with the emergency "
+                "unlock."
+            )
         )
         self.nota.setWordWrap(True)
         self.nota.setObjectName("hint")
@@ -429,10 +512,13 @@ class MainWindow(QMainWindow):
         av = QVBoxLayout(atajos)
         av.setContentsMargins(26, 18, 26, 20)
         av.setSpacing(4)
-        at = QLabel("Atajos")
+        at = QLabel(tr("Shortcuts"))
         at.setObjectName("cardTitle")
         av.addWidget(at)
-        lista = QLabel("Ctrl+L  activar bloqueo        Ctrl+E  desbloqueo de emergencia")
+        lista = QLabel(
+            f"Ctrl+L  {tr('turn on the lock')}"
+            f"        Ctrl+E  {tr('emergency unlock')}"
+        )
         lista.setObjectName("hint")
         av.addWidget(lista)
         v.addWidget(atajos)
@@ -567,14 +653,15 @@ class MainWindow(QMainWindow):
         tt_body.addLayout(tf)
         self.token = QLineEdit()
         self.token.setEchoMode(QLineEdit.Password)
-        self.token.setPlaceholderText("Token tp_…  (se guarda cifrado con DPAPI)")
-        tf.addRow("Token", self.token)
+        self.token.setPlaceholderText(
+            tr("Token tp_…  (stored encrypted with DPAPI)")
+        )
+        tf.addRow(tr("Token"), self.token)
         row = QHBoxLayout()
-        row = QHBoxLayout()
-        self.btn_token = QPushButton("Probar conexión y guardar")
+        self.btn_token = QPushButton(tr("Test connection and save"))
         self.btn_token.setObjectName("ghost")
         self.btn_token.clicked.connect(self._test_token)
-        clear = QPushButton("Borrar token")
+        clear = QPushButton(tr("Clear token"))
         clear.setObjectName("ghost")
         clear.clicked.connect(self._clear_token)
         row.addWidget(self.btn_token)
@@ -591,12 +678,14 @@ class MainWindow(QMainWindow):
         tf.addRow(fila)
 
         self.project_name = QLineEdit()
-        self.project_name.setPlaceholderText("Ej: Estudios")
-        tf.addRow("Proyecto de TickTick", self.project_name)
+        self.project_name.setPlaceholderText(tr("E.g: Studies"))
+        tf.addRow(tr("TickTick project"), self.project_name)
 
         hint = QLabel(
-            "Se cuenta cualquier tarea del proyecto, sin mirar el nombre. "
-            "Tachá 2 tareas en TickTick y se desbloquea."
+            tr(
+                "Any task in the project counts; the name is not looked at. "
+                "Tick off 2 tasks in TickTick and it unlocks."
+            )
         )
         hint.setWordWrap(True)
         hint.setObjectName("hint")
@@ -604,15 +693,39 @@ class MainWindow(QMainWindow):
 
         self.required = QSpinBox()
         self.required.setRange(1, 50)
-        tf.addRow("Lecturas necesarias", self.required)
+        tf.addRow(tr("Readings needed"), self.required)
         self.poll_secs = QSpinBox()
         self.poll_secs.setRange(15, 600)
         self.poll_secs.setSingleStep(15)
         self.poll_secs.setSuffix(" s")
-        tf.addRow("Frecuencia de consulta", self.poll_secs)
+        tf.addRow(tr("Poll interval"), self.poll_secs)
+
+        # El idioma NO se guarda con "Guardar ajustes". Cambiarlo reinicia la
+        # ventana entera, porque los textos van hardcodeados en los
+        # constructores: no alcanza con volver a pintar. Va aparte y con su
+        # propio boton, y el aviso lo dice.
+        lang_box, lang_body = self._card(tr("Language"))
+        lf = QFormLayout()
+        lf.setContentsMargins(0, 0, 0, 0)
+        lf.setVerticalSpacing(12)
+        lang_body.addLayout(lf)
+        self.lang_combo = QComboBox()
+        for code in i18n.IDIOMAS:
+            self.lang_combo.addItem(i18n.NOMBRES[code], code)
+        idx = self.lang_combo.findData(getattr(self, "_idioma", "en"))
+        self.lang_combo.setCurrentIndex(max(0, idx))
+        self.lang_combo.currentIndexChanged.connect(self._change_language)
+        lf.addRow(tr("Interface language"), self.lang_combo)
+        lang_hint = QLabel(
+            tr("Changing this restarts the window. Your token and settings stay.")
+        )
+        lang_hint.setWordWrap(True)
+        lang_hint.setObjectName("hint")
+        lf.addRow(lang_hint)
+        v.addWidget(lang_box)
         v.addWidget(tt)
 
-        em_box, em_body = self._card("Emergencia")
+        em_box, em_body = self._card(tr("Emergency"))
         ef = QFormLayout()
         ef.setContentsMargins(0, 0, 0, 0)
         ef.setVerticalSpacing(12)
@@ -620,38 +733,40 @@ class MainWindow(QMainWindow):
         self.em_words = QSpinBox()
         self.em_words.setRange(50, 5000)
         self.em_words.setSingleStep(50)
-        ef.addRow("Palabras mínimas", self.em_words)
+        ef.addRow(tr("Minimum words"), self.em_words)
         self.em_minutes = QSpinBox()
         self.em_minutes.setRange(1, 120)
-        ef.addRow("Minutos de escritura", self.em_minutes)
+        ef.addRow(tr("Writing minutes"), self.em_minutes)
         self.em_unlock = QSpinBox()
         self.em_unlock.setRange(1, 480)
-        ef.addRow("Minutos que desbloquea", self.em_unlock)
+        ef.addRow(tr("Minutes it unlocks for"), self.em_unlock)
         v.addWidget(em_box)
 
-        ext, ext_body = self._card("Extensión del navegador")
+        ext, ext_body = self._card(tr("Browser extension"))
         xf = QFormLayout()
         xf.setContentsMargins(0, 0, 0, 0)
         xf.setVerticalSpacing(12)
         ext_body.addLayout(xf)
         ext_hint = QLabel(
-            "Copiá esta dirección en la página de opciones de la extensión.\n"
-            "Chrome: chrome://extensions → Modo de desarrollador → Cargar descomprimida "
-            "→ carpeta extension/chrome.\n"
-            "Firefox: about:debugging#/runtime/this-firefox → Cargar complemento temporal "
-            "→ extension/firefox/manifest.json"
+            tr(
+                "Paste this address into the extension's options page.\n"
+                "Chrome: chrome://extensions → Developer mode → Load unpacked "
+                "→ the extension/chrome folder.\n"
+                "Firefox: about:debugging#/runtime/this-firefox → Load Temporary "
+                "Add-on → extension/firefox/manifest.json"
+            )
         )
         ext_hint.setWordWrap(True)
         ext_hint.setObjectName("hint")
         xf.addRow(ext_hint)
         self.ext_url = QLineEdit()
         self.ext_url.setReadOnly(True)
-        xf.addRow("Dirección", self.ext_url)
+        xf.addRow(tr("Address"), self.ext_url)
         row = QHBoxLayout()
-        copy = QPushButton("Copiar dirección")
+        copy = QPushButton(tr("Copy address"))
         copy.setObjectName("ghost")
         copy.clicked.connect(self._copy_endpoint)
-        open_dir = QPushButton("Abrir carpeta de la extensión")
+        open_dir = QPushButton(tr("Open extension folder"))
         open_dir.setObjectName("ghost")
         open_dir.clicked.connect(self._open_ext_dir)
         row.addWidget(copy)
@@ -660,7 +775,7 @@ class MainWindow(QMainWindow):
         xf.addRow(row)
         v.addWidget(ext)
 
-        save = QPushButton("Guardar ajustes")
+        save = QPushButton(tr("Save settings"))
         save.clicked.connect(self._save_settings)
         # A la derecha y de ancho natural: estirado a todo el ancho el boton
         # primario de la pagina parece un banner, no una accion.

@@ -60,6 +60,13 @@ def _literales_tr() -> set[str]:
 
     usadas.update(hint for _, hint in em.PROMPTS)
     usadas.update(em.PROMPT_LABELS.values())
+
+    # Lo mismo con las etiquetas y los subtitulos del menu: se indexan por ID
+    # y se pasan por tr(self.ETIQUETAS[etiqueta]), nunca como literal.
+    from focuslock.ui.app import MainWindow
+
+    usadas.update(MainWindow.ETIQUETAS.values())
+    usadas.update(MainWindow.SUBTITULOS.values())
     return usadas
 
 

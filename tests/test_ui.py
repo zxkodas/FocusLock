@@ -187,8 +187,50 @@ class TestMainWindow(QtTestCase):
             for i in range(self.window.nav.count())
         ]
         self.assertEqual(
-            titles, ["Estado", "Programas", "Sitios", "Ajustes", "Bitácora"]
+            titles, ["Status", "Programs", "Sites", "Settings", "Log"]
         )
+
+    def test_las_etiquetas_siguen_al_idioma(self):
+        """El menu se construye en el idioma que dice la config.
+
+        Las claves de PAGINAS no se traducen: son IDs. Lo que se traduce es la
+        etiqueta. Este test es el que agarra el error de usar la etiqueta como
+        clave, que antes hacia que traducir rompiera el lookup.
+        """
+        from PySide6.QtWidgets import QApplication
+
+        from focuslock import i18n
+        from focuslock.ui.app import MainWindow
+
+        previo = i18n.lang()
+        try:
+            for lang, esperadas in (
+                ("en", ["Status", "Programs", "Sites", "Settings", "Log"]),
+                ("es", ["Estado", "Programas", "Sitios", "Ajustes", "Bitácora"]),
+            ):
+                with self.subTest(lang=lang):
+                    # Se cambia la CONFIG, no el global: la ventana lee el
+                    # idioma de ahi y lo pisa. Poner i18n.set_lang antes de
+                    # construir no alcanza, y probarlo asi esconde justamente
+                    # el bug que este test busca.
+                    self.client.config["general"]["language"] = lang
+                    v = MainWindow(self.client)
+                    v.resize(900, 700)
+                    v.show()
+                    QApplication.instance().processEvents()
+                    titulos = [
+                        v.nav.item(i).text() for i in range(v.nav.count())
+                    ]
+                    self.assertEqual(titulos, esperadas)
+                    # Y el indice sigue funcionando con los IDs sin traducir.
+                    v.nav.setCurrentRow(3)
+                    self.assertEqual(v.stack.currentIndex(), 3)
+                    v._timer.stop()
+                    v.close()
+                    v.deleteLater()
+        finally:
+            self.client.config["general"].pop("language", None)
+            i18n.set_lang(previo)
 
     def test_nav_and_stack_stay_in_sync(self):
         """Cada fila del menu tiene que mostrar su pagina."""
