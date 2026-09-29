@@ -1,296 +1,396 @@
 # FocusLock
 
-Bloqueador de foco para Windows. Te deja la PC y el navegador clavados hasta
-que completing **2 Lecturas** de tu proyecto de estudios en TickTick.
+**A focus blocker for Windows.** It locks the programs and websites you chose
+and keeps them locked until you complete **2 tasks** in your TickTick project.
 
-El desbloqueo de emergencia existe, pero hay que **escribir 300 palabras y
-estar 5 minutos Tecleando** para pasarlo. Queda registrado con fecha y texto,
-para releerlo la próxima vez que te agarre la tentación.
+There is an emergency escape hatch. It costs you 300 words and five minutes of
+real typing, and it is written down with a timestamp so you can read your own
+words back the next time you are tempted.
+
+This is a self-imposed commitment device, not a parental control. Everything it
+blocks is on your own machine, under your own account. The whole design is
+aimed at one moment: the ten seconds when you are alone and deciding whether to
+cheat.
 
 ---
 
-## Cómo funciona
+## Table of contents
+
+- [What it actually does](#what-it-actually-does)
+- [How it works](#how-it-works)
+- [The three layers of blocking](#the-three-layers-of-blocking)
+- [Why IFEO is the layer that matters](#why-ifeo-is-the-layer-that-matters)
+- [Safety: what can never be blocked](#safety-what-can-never-be-blocked)
+- [Installation](#installation)
+- [Browser extension setup](#browser-extension-setup)
+- [Command reference](#command-reference)
+- [How unlocking is decided](#how-unlocking-is-decided)
+- [The emergency unlock](#the-emergency-unlock)
+- [Configuration reference](#configuration-reference)
+- [Where things live](#where-things-live)
+- [Project layout](#project-layout)
+- [Running the tests](#running-the-tests)
+- [Known limits](#known-limits)
+- [Before you start](#before-you-start)
+
+---
+
+## What it actually does
+
+**Blocking is opt-in.** Opening FocusLock does not lock anything. You press
+**Activate lock**, and from that moment the chosen programs will not start and
+the chosen sites will not load, until two tasks are completed in TickTick.
+
+Credits are earned only by doing the work in TickTick. There is deliberately
+**no "mark as done" button inside FocusLock** — that shortcut would defeat the
+entire point of the app.
+
+## How it works
 
 ```
-┌─ Tu sesión normal (sin permisos) ──────────────┐
-│   FocusLock.exe (GUI)  ──pipe──┐                │
-│   Extensión Chrome/Firefox ────┤                │
-└────────────────────────────────┼────────────────┘
-                                 ▼
-┌─ Servicio de Windows (LocalSystem, autoarranque) ┐
-│  · lee TickTick y acredita Lecturas               │
-│  · aplica/quita claves IFEO en HKLM               │
-│  · vigilante de procesos cada 0.8 s               │
-│  · servidor HTTP local para las extensiones       │
+┌─ Your normal session (no admin rights) ────────────┐
+│    FocusLock GUI  ──────named pipe──────┐          │
+│    Browser extension ─────local HTTP────┤          │
+└──────────────────────────────────────────┼──────────┘
+                                           ▼
+┌─ Windows service (LocalSystem, starts on boot) ────┐
+│    · polls TickTick and awards credits            │
+│    · writes / removes IFEO keys in HKLM           │
+│    · process guard, every 0.8 s                    │
+│    · local HTTP server for the browser extension  │
 └───────────────────────────────────────────────────┘
 ```
 
-El servicio es el dueño real del bloqueo. La GUI solo le pide cosas por un named
-pipe, así que **funciona sin permisos de administrador**. Solo la instalación
-inicial necesita elevación, y es una sola vez.
+The service is the real owner of the block. The GUI only asks it for things over
+a named pipe, which is why **the GUI works without administrator rights**. Only
+the one-time install needs elevation.
 
-#> **Antes de nada: procesos que FocusLock nunca va a matar.** Están en
-> `rules.NEVER_BLOCK` y no se pueden desactivar desde la configuración, ni
-> siquiera con confirmación explícita. Incluye `explorer.exe` (el shell de
-> Windows: si muere se te cae el escritorio entero), `userinit.exe`, el núcleo
-> de sesión (`lsass`, `csrss`, `winlogon`, `services`), antivirus, y
-> `OpenCode.exe`. Editar la lista de bloqueados no los alcanza: la regla misma
-> devuelve False para esos nombres.
->
-> `explorer.exe` **no va** en la lista de permitidos a propósito. Esa lista la
-> podés editar vos; `NEVER_BLOCK` no. Si estuviera solo en permitidos, un día
-> la sacás por error y perdés el acceso igual.
+## The three layers of blocking
 
-## Las tres capas de bloqueo
-
-| Capa | Qué hace | Se esquiva… |
+| Layer | What it does | How it can be beaten |
 |---|---|---|
-| **IFEO** | Windows ni siquiera arranca el programa: lo sustituye por un aviso | Necesitás admin para borrar las claves de `HKLM` |
-| **Vigilante** | Detecta en 0.8 s y mata el proceso si Somehow arrancó | Kill manual desde el Administrador de tareas |
-| **Extensión** | Bloquea dominios y cierra pestañas ya abiertas | Desactivar la extensión (sí, podés) |
+| **IFEO** | Windows never starts the program at all — it is replaced by a notice | You would need admin rights to delete the `HKLM` keys |
+| **Process guard** | Detects a process within 0.8 s and kills it if it slipped through | Killing it by hand from Task Manager |
+| **Browser extension** | Blocks domains and closes tabs that are already open | Turning the extension off (yes, you can) |
 
-La extensión es la capa más débil y es deliberado: no tenés forma de bloquear
-una extensión desde otro proceso sinque el usuario lo note. El IFEO es la que
-aguanta.
+The extension is the weakest layer, on purpose. There is no way to block an
+extension from another process without the user noticing. **IFEO is the layer
+that holds.**
 
-### Por qué el IFEO es la capa que importa
+### Why IFEO is the layer that matters
 
 `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution
-Options\<programa>.exe` con un valor `Debugger` hace que Windows **no ejecute**
-el programa: ejecuta el debugger en su lugar. El programa bloqueado no llega a
-cargar ni a pintar una ventana.
+Options\<program>.exe` with a `Debugger` value makes Windows **not run** the
+program — it runs the debugger instead. The blocked program never loads and
+never paints a window.
 
-Y como vive en `HKLM`, un usuario normal no lo puede tocar. Se necesita
-elevación para desarmarlo, que es justo el punto: la tentación no debería
-bastar con abrir una consola.
+And because it lives in `HKLM`, a normal user cannot touch it. Removing it
+requires elevation, which is exactly the point: **opening a console should not
+be enough.**
 
----
+## Safety: what can never be blocked
 
-## Instalación
+> **`rules.NEVER_BLOCK` is enforced inside `match_program()` itself.** It is not
+> part of your editable allowlist, so it cannot be turned off from the settings —
+> not even with explicit confirmation.
+>
+> It contains the desktop shell (`explorer.exe`, `userinit.exe`, `sihost.exe`,
+> `ctfmon.exe`, …), the session core (`lsass.exe`, `csrss.exe`, `winlogon.exe`,
+> `services.exe`, `svchost.exe`, …), antivirus (`msmpeng.exe`), FocusLock
+> itself, and the entire set of tools you would use to undo the block:
+> `cmd.exe`, `powershell.exe`, `taskmgr.exe`, `regedit.exe`, `taskkill.exe`,
+> `shutdown.exe`, `msconfig.exe`, `control.exe`, `rundll32.exe`, `mshta.exe`,
+> `wscript.exe`, `cscript.exe`.
+>
+> `explorer.exe` is **not** in the allowlist on purpose. The allowlist is
+> editable; `NEVER_BLOCK` is not. If it were only in the allowlist, one day you
+> would remove it by accident and lose access to your desktop anyway.
 
-Abrí PowerShell **como Administrador** en esta carpeta:
+This design came directly out of a bug: an earlier version of the process guard
+killed `explorer.exe` and took the whole desktop down with it.
+
+## Installation
+
+Requirements: **Windows 10/11**, **Python 3.11+**, and a **TickTick** account
+with a kanban project for your tasks.
+
+> **Note:** this README is in English, but the **GUI is in Spanish**. The tabs are
+> `Estado`, `Programas`, `Sitios`, `Ajustes` and `Bitácora`. The code comments are
+> Spanish too.
+
+Open **PowerShell as Administrator** in this folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-Eso instala dependencias, registra el servicio de Windows, lo arranca y
-verifica que responda. Para dejar el token configurado de una:
+That installs the dependencies, registers the Windows service, starts it, and
+verifies that it answers. To set your TickTick token in the same step:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1 -Token "tp_..."
 ```
 
-Después, **sin permisos**, abrís la app:
+Then, **without** admin rights:
 
 ```powershell
 python -m focuslock gui
 ```
 
-Para desinstalar (como Administrador):
+To remove everything (as Administrator):
 
 ```powershell
 python -m focuslock uninstall
 ```
 
----
+## Browser extension setup
 
-## Configurar las extensiones del navegador
+The extensions talk to the service over HTTP on `127.0.0.1:47821`. The URL
+carries a random token, so it cannot be guessed or reached from anywhere else.
 
-Las extensiones converse con el servicio por HTTP en `127.0.0.1`. La
-dirección incluye un token aleatorio, así que no se puede adivinar ni usar
-desde otro lado.
+Open the extension options and paste the address shown in FocusLock under
+*Browser extension* (tab `Ajustes` → *Extensión del navegador*).
 
-**Chrome / Edge / Brave** (Chromium, Manifest V3)
+### Chrome / Edge / Brave (Chromium, Manifest V3)
 
-1. `chrome://extensions` → activá **Modo de desarrollador**
-2. **Cargar descomprimida** → elegí `extension/chrome`
-3. Abrí las opciones de la extensión, pegá la dirección que muestra
-   FocusLock en *Ajustes → Extensión del navegador* y guardá
+1. Go to `chrome://extensions` and turn on **Developer mode**
+2. **Load unpacked** → select the `extension/chrome` folder
+3. Open the extension options, paste the address, save
 
-**Firefox** (Manifest V3 con event pages)
+> This loads the extension from a folder, so if you move or delete the project
+> folder Chrome stops blocking. It survives browser restarts, not the folder
+> being moved.
 
-1. `about:debugging#/runtime/this-firefox` → **Cargar complemento temporal**
-2. Elegí `extension/firefox/manifest.json`
-3. Mismo paso: pegá la dirección en las opciones
+### Firefox (Manifest V3, event pages)
 
-Ambas extensiones son *fail-open*: si el servicio no responde, no bloquean nada
-por su cuenta. El bloqueo real lo sostiene Windows.
+Firefox requires extensions to be signed, and an unsigned `.xpi` is refused with
+*"this extension has not been verified."* There are two ways to run it:
 
----
+- **Signed build (recommended).** Sign the extension through
+  [addons.mozilla.org](https://addons.mozilla.org/developers/) and install the
+  resulting `.xpi` with *Install Add-on From File*. This is permanent.
+- **Temporary.** `about:debugging#/runtime/this-firefox` → *Load Temporary
+  Add-on* → select `extension/firefox/manifest.json`. This one is **removed
+  every time you close the browser**, so it is only useful for testing.
 
-## Los otros comandos
+To rebuild the package after changing the extension:
 
 ```powershell
-python -m focuslock status    # estado en una línea
-python -m focuslock doctor    # diagnóstico: servicio, IFEO, TickTick, vigilante
-python -m focuslock console   # motor en primer plano, CON EL VIGILANTE APAGADO
+python -m focuslock.build_xpi
 ```
 
-`doctor` es el primero que conviene correr si algo no se comporta.
+Both extensions are **fail-open**: if the service does not answer, they block
+nothing on their own. The real block is held by Windows.
 
-### Por qué `console` no arma el vigilante
+## Command reference
 
-`console` corre el motor **en tu sesión de escritorio**, no como servicio. Si
-el vigilante de procesos se levantara ahí, mataría programas de la sesión que
-estás usando — incluido el escritorio. Por eso viene apagado y hay que pedirlo
-a propósito:
+| Command | What it does |
+|---|---|
+| `python -m focuslock install [--token tp_…]` | Install and start the service (**needs admin**) |
+| `python -m focuslock uninstall` | Remove the service, IFEO keys and shortcuts (**needs admin**) |
+| `python -m focuslock gui` | Open the main window (no admin needed) |
+| `python -m focuslock status` | One-line status summary |
+| `python -m focuslock doctor` | **Full diagnostics: service, IFEO, TickTick, guard** |
+| `python -m focuslock reset` | Back to factory state: unlocked, counters at zero |
+| `python -m focuslock ifeo-reconcile` | Clean up orphaned IFEO keys (works with the service stopped) |
+| `python -m focuslock console` | Run the engine in the foreground, **guard off** |
+
+`doctor` is the first thing to run when something is not behaving.
+
+### Why `console` does not arm the guard
+
+`console` runs the engine **in your desktop session**, not as a service. If the
+process guard ran there it would kill programs in the session you are using —
+including your desktop. So it is off by default and you have to ask for it
+explicitly:
 
 ```powershell
 python -m focuslock console --armar-guard
 ```
 
-Como servicio (`install`), el vigilante sí va armado, que es lo que tiene que
-hacer. La diferencia es dónde corre: en `LocalSystem`, no en tu escritorio.
+As a service (`install`) the guard *is* armed, because that is what it has to
+do. The difference is where it runs: in `LocalSystem`, not on your desktop.
 
----
+## How unlocking is decided
 
-## Cómo se决定 el desbloqueo
+The TickTick project is looked up **by name** on every poll, not by a stored ID.
+If you rename or recreate it, the app keeps working. The emoji TickTick adds to
+the name (`📖Studies`) is ignored when comparing.
 
-El proyecto de TickTick se busca **por nombre** en cada consulta, no por ID
-guardado. Si lo renombrás o lo recreás, la app lo sigue sin intervención. El
-emoji que TickTick le pone (`📖Estudios`) se ignora al comparar.
+**Every task in the project counts.** There is no name filter and no prefix:
+what matters is that the total drops while the lock is active, not what the task
+is called. (`task_prefix` still exists in the config file for backward
+compatibility, but it is deprecated and unused.)
 
-Solo cuentan las tareas cuyo **título empieza con** el prefijo configurado
-(por defecto `Lectura`). `TP 1`, `Parcial 2` y `Modulo 4` no cuentan nunca.
+A credit is awarded by **change**, not by state. A task only counts if the app
+saw it pending first and then saw it completed. That avoids two real bugs:
 
-El crédito se otorga por **transición**: una tarea que la app ya vio
-pendiente y después aparece completada. Dos casos que esto evita:
+- Installing the app with 20 old tasks already ticked does not unlock anything.
+  The first pass seeds the baseline without awarding credit.
+- If the API returns a truncated list and a task reappears already completed, it
+  is not counted as new.
 
-- Instalar la app con 20 Lecturas viejas ya marcadas no te desbloquea nada.
-  La primera pasada siembra la línea base sin acreditar.
-- Si la API devuelve una lista truncada y una tarea reaparece ya completada,
-  no se cuenta como nueva.
+**Recurring tasks — the case that actually matters.** Recurring TickTick tasks
+are not archived when you tick them; they reset to `0` for the next day. There
+is no "pending → completed" transition to observe. So FocusLock also credits a
+task **that was registered and is now gone from the project**. Completing all
+the tasks in the project counts as finishing the work, not as a glitch.
 
-Solo se acredita lo que vosmarks en TickTick. **No hay botón de "marcar como
-hecha" en FocusLock**, a propósito: sería un atajo que anula el sentido de la
-app.
+The trade-off is explicit: **deleting a task by hand also counts.** That is the
+price of TickTick not exposing the completed state of a recurring task.
 
-Los créditos no se pierden: si completás una Lectura y después reiniciás la PC,
-sigue contando.
+Credits survive a restart. Complete a task, reboot, and it still counts.
 
----
+## The emergency unlock
 
-## La emergencia
+To unlock without completing anything:
 
-Para desbloquear sin tareas hay que:
+1. Write **300 words** in the commitment.
+2. Type for **5 minutes**, measured from the first keystroke to the last.
+   Closing and reopening the dialog **does not** reset the timer.
+3. Answer three reflection questions, 30 words each.
 
-1. Escribir **300 palabras** en el compromiso.
-2. **5 minutos** de escritura real, medidos entre la primera y la última
-   pulsación. Cerrar y reabrir el diálogo **no** reinicia el cronómetro.
-3. Responder tres preguntas de reflexión, 30 palabras cada una.
+The app measures **keystrokes**, not just characters, so pasting a long text
+from the clipboard does not work: the characters-per-keystroke ratio spikes and
+it is rejected. Leaving a text in place and waiting does not work either,
+because the time is measured between keystrokes.
 
-La app mide pulsaciones de teclado, no solo caracteres, así que pegar un texto
-largo desde el portapapeles no sirve: el ratio de caracteres por pulsación se
-dispara y lo rechaza. Tampoco vale con dejar el texto escrito y esperar, porque
-el tiempo se cuenta entre pulsaciones.
+If you get through, the block lifts for the configured window (20 minutes by
+default) and the full text is logged with a date and word count in the
+**`Bitácora`** tab. When the window expires, the block returns on its own.
 
-Si pasa, desbloquea por el tiempo configurado (20 minutos por defecto) y queda
-registrado el texto completo en la pestaña **Bitácora**, con fecha y palabras.
+## Configuration reference
 
-Al expirar, se vuelve a bloquear solo.
+Everything lives in `C:\ProgramData\FocusLock\config.json`. The defaults, in
+full:
 
----
+| Key | Default | Meaning |
+|---|---|---|
+| `ticktick.project_name` | `"Estudios"` | Kanban project, matched by name |
+| `ticktick.project_id` | `""` | Fallback if you prefer matching by ID |
+| `ticktick.required` | `2` | Credits needed to unlock |
+| `ticktick.poll_seconds` | `45` | How often TickTick is polled |
+| `ticktick.task_prefix` | `""` | **Deprecated and unused** |
+| `programs.blocked` | `[]` | Programs to block |
+| `programs.allowed` | `notepad.exe`, `Code.exe`, `pycharm64.exe`, `devenv.exe`, `opencode.exe`, `focuslock.exe` | Never block these |
+| `programs.use_ifeo` | `true` | Use the hard IFEO block |
+| `sites.blocked` | `[]` | Domains to block |
+| `sites.allowed` | `docs.python.org`, `stackoverflow.com`, `upt.edu.ar` | Never block these |
+| `emergency.min_words` | `300` | Words in the written commitment |
+| `emergency.min_minutes` | `5` | Minutes of real typing |
+| `emergency.unlock_minutes` | `20` | How long the escape hatch lasts |
+| `emergency.history_limit` | `50` | Emergency entries kept in the log |
+| `general.start_locked` | `false` | **Opt-in:** never block just because the app opened |
+| `general.show_block_notice` | `true` | Show the IFEO notice screen |
 
-## Dónde están las cosas
+`general.start_locked` defaults to `false` on purpose: **launching FocusLock
+must never lock anything by itself.** Only the button does.
 
-| Qué | Dónde |
+## Where things live
+
+| What | Where |
 |---|---|
-| Configuración | `C:\ProgramData\FocusLock\config.json` |
-| Estado, créditos, bitácora | `C:\ProgramData\FocusLock\state.json` |
-| Token de TickTick | en `state.json`, **cifrado con DPAPI** |
-| Extensiones | `extension/chrome/`, `extension/firefox/` |
-| Tests | `python -m tests.test_focuslock`, `test_imports`, `test_guard` |
+| Configuration | `C:\ProgramData\FocusLock\config.json` |
+| State, credits, logs | `C:\ProgramData\FocusLock\state.json` |
+| TickTick token | inside `state.json`, **encrypted with DPAPI** |
+| Service | `FocusLockSvc` ("FocusLock Enforcement Service") |
+| GUI ↔ service channel | `\\.\pipe\FocusLock` |
+| Extension endpoint | `http://127.0.0.1:47821/state?token=…` |
+| Extensions | `extension/chrome/`, `extension/firefox/` |
 
-El token nunca se guarda en texto plano. Usa DPAPI con scope de máquina, que es
-lo que permite que el servicio (LocalSystem) y la GUI (usuario) lo lean sin
-compartir nada.
+The token is never stored in plain text. It uses DPAPI at machine scope, which
+is what lets the service (`LocalSystem`) and the GUI (your user) both read it
+without sharing anything between accounts.
 
----
-
-## Estructura del código
+## Project layout
 
 ```
 focuslock/
-  daemon.py     motor: coordina todo (corre en el servicio)
-  gate.py       la lógica de la puerta: qué cuenta y cuándo desbloquea
-  rules.py      normalización y coincidencia (tareas, sitios, programas)
-  ifeo.py       escritura/limpieza de claves de registro
-  guard.py      vigilante de procesos
-  server.py     HTTP local para las extensiones
-  ipc.py        named pipe GUI ↔ servicio
-  emergency.py  validación del compromiso escrito
-  ticktick.py   cliente de la API (sin dependencias)
-  store.py      estado persistente
-  config.py     configuración
-  secrets.py    cifrado DPAPI
-  service.py    envoltorio del servicio de Windows
-  stub.py       aviso que muestra IFEO en vez del programa
-  ui/           ventana principal y diálogo de emergencia
+  daemon.py     the engine: coordinates everything (runs as the service)
+  gate.py       the gate: what counts as work and when it unlocks
+  rules.py      normalisation and matching (tasks, sites, programs)
+  ifeo.py       writing and cleaning registry keys
+  guard.py      the process guard
+  server.py     local HTTP server for the extensions
+  ipc.py        named pipe between GUI and service
+  emergency.py  validation of the written commitment
+  ticktick.py   API client (no third-party dependencies)
+  store.py      persistent state
+  config.py     configuration
+  secrets.py    DPAPI encryption
+  service.py    Windows service wrapper
+  stub.py       the notice IFEO shows instead of your program
+  paths.py      paths and platform checks
+  local.py      non-service mode, for development
+  diag.py       diagnostics
+  reset.py      factory reset
+  build_xpi.py  packaging for the browser extensions
+  ui/           main window and emergency dialog
 ```
 
-`gate.py` es el corazón y está aislado de I/O: recibe un cliente y un store, y
-se puede probar entero sin red.
+**`gate.py` is the heart and it is isolated from I/O:** it takes a client and a
+store, so the whole thing can be tested without a network.
 
----
-
-## Probar los cambios
+## Running the tests
 
 ```powershell
-.\run_tests.ps1          # las 4 suites, cada una en su proceso
-.\run_tests.ps1 -Quick   # omite test_guard, que es el lento
+.\run_tests.ps1          # all 8 suites, each in its own process
+.\run_tests.ps1 -Quick   # skips test_guard, the slow one
 ```
 
-O una por vez:
+Or one at a time:
 
-| Suite | Qué cubre |
+| Suite | What it covers |
 |---|---|
-| `test_focuslock` | reglas, la puerta, emergencia, cifrado DPAPI, servidor HTTP |
-| `test_imports` | imports válidos y que la UI solo llame comandos existentes |
-| `test_ui` | **construye la ventana y el tray de verdad**, en modo headless |
-| `test_guard` | **mata procesos reales** y verifica la protección de `explorer.exe` |
+| `test_focuslock` | Rules, the gate, the emergency flow, DPAPI, the HTTP server |
+| `test_win32` | Scans the Win32 layer and the pywin32 module layout |
+| `test_imports` | Valid imports, and that the UI only calls commands that exist |
+| `test_ifeo` | Registry key construction and cleanup |
+| `test_stub` | The block notice the stub shows |
+| `test_ui` | **Builds the real window and tray**, headless |
+| `test_extension` | The two extension manifests and the popup |
+| `test_guard` | **Kills real processes** and verifies the `explorer.exe` protection |
 
-Cada suite va en su propio proceso a propósito. `test_ui` crea un
-`QApplication` y Qt solo admite uno por proceso; si compartieran, la segunda
-suite que arranque fallaría.
+**196 tests.** Each suite runs in its own process on purpose: `test_ui` creates
+a `QApplication`, and Qt only allows one per process, so a second suite sharing
+the process would fail.
 
-Dos que merecen confianza:
+Two are worth trusting more than the rest:
 
-- `test_ui` es lo que atrapó los bugs de `createMenu()` y del doble
-  `QApplication`, además del banner que afirmaba "BLOQUEADO" sin tener idea.
-  Construye la ventana de verdad, contra un servicio simulado.
-- `test_guard` lanza copias de `pythonw.exe` con nombres propios y verifica que
-  el vigilante las mate. No toca el `python.exe` real: el runner sería un
-  objetivo válido y se mataría a sí mismo. Y hay un bloque entero de tests que
-  comprueba que `explorer.exe` y `OpenCode.exe` **nunca** son objetivo, sin
-  matar nada.
+- `test_ui` builds the actual window against a simulated service. It is what
+  caught the `createMenu()` bug, the double `QApplication`, and the banner that
+  claimed "LOCKED" without having any idea.
+- `test_guard` launches copies of `pythonw.exe` under its own names and checks
+  that the guard kills them. It never touches the real `python.exe` — the test
+  runner would be a valid target and would kill itself. A whole block of tests
+  verifies that `explorer.exe` and `OpenCode.exe` are **never** targets, without
+  killing anything.
 
----
+## Known limits
 
-## Límites conocidos
+- **The browser extension can be turned off.** IFEO cannot, but open tabs stay
+  a back door for as long as the browser is running.
+- **The process guard matches by process name.** If you have two versions of
+  the same app under different names, block both. And if one of them happens to
+  be called `explorer.exe` or `OpenCode.exe` on your machine, FocusLock will
+  never touch it.
+- **`console` is a development mode, not a daily-use mode.** It is for reading
+  logs and testing the TickTick connection. Install the service for real use.
+- **IFEO requires admin rights.** Without elevation the hard block is disabled
+  and only the process guard works. `install.ps1` warns if they are missing.
+- **The TickTick API is used as-is.** If TickTick changes its endpoints,
+  `ticktick.py` needs updating. The project is matched by name precisely so that
+  a change of ID does not break anything.
+- **The service must be running.** Registry keys persist across reboots, but
+  with the service stopped there is no guard and no polling.
+- **Deleting a TickTick task by hand counts as completing it.** This is the
+  price of recurring tasks, as described above.
 
-- **La extensión se puede desactivar** desde el navegador. El IFEO no, pero
-  las pestañas quedan como puerta trasera mientras el navegador esté abierto.
-- **El vigilante mata por nombre de proceso.** Si tenés dos versiones de la
-  misma app con nombres distintos, hay que bloquear las dos. Ojo: si una de
-  ellas se llama `explorer.exe` o `OpenCode.exe` en tu PC, FocusLock no la va a
-  tocar nunca.
-- **`console` es un modo de desarrollo, no un modo de uso.** Sirve para ver
-  logs y probar la conexión con TickTick. Para el uso diario, instalá el
-  servicio.
-- **IFEO requiere admin.** Sin elevación el bloqueo duro queda desactivado y
-  solo funciona el vigilante. `install.ps1` avisa si falta.
-- **La API de TickTick es usada tal cual.** Si TickTick cambia endpoints, hay
-  que ajustar `ticktick.py`. El proyecto se busca por nombre justamente para
-  que un cambio de ID no rompa nada.
-- **Un reinicio de Windows limpia el IFEO** solo si alguien lo borró
-  explícitamente; las claves de registro persisten. Pero si el servicio no
-  está corriendo, no hay vigilancia.
+## Before you start
 
----
+Revoke any TickTick token you have shared in a chat, a screenshot or anywhere
+else, and generate a new one. FocusLock stores it encrypted, but **a leaked token
+lets someone read and modify your tasks.**
 
-## Antes de dejarlo funcionando
-
-Revocá el token de TickTick y generá uno nuevo. Si compartiste el token en un
-chat o lo pegaste en algún lado, da por filtrado: la app lo guarda cifrado,
-pero un token filtrado sirve para leer y modificar tus tareas.
+If you revoke a token, re-enter the new one in FocusLock → `Ajustes`, and the
+extension will report `invalid token` until you do.
