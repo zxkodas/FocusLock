@@ -61,7 +61,7 @@ def title_matches_prefix(title: str, prefix: str) -> bool:
 
 # Procesos que nunca deben matarse: matarlos deja Windows inservible.
 # Bloquear uno de estos requiere habilitarlo explícitamente en "dangerous".
-# Procesos que FocusLock jamas mata, sin excepcion y aunque el usuario los
+# Procesos que TickFence jamas mata, sin excepcion y aunque el usuario los
 # ponga en la lista de bloqueados. Matar cualquiera de estos deja Windows
 # inservible o corta la sesion de escritorio.
 #
@@ -117,7 +117,8 @@ NEVER_BLOCK = {
     "nissrv.exe",
     "mbamservice.exe",
 
-    # --- FocusLock mismo ---
+    # --- TickFence mismo ---
+    "TickFence.exe",
     "focuslock.exe",
     "focuslock_svc.exe",
     "opencode.exe",

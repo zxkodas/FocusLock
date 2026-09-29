@@ -17,11 +17,11 @@ from . import paths
 from .daemon import Engine
 
 
-class FocusLockService(win32serviceutil.ServiceFramework):
+class TickFenceService(win32serviceutil.ServiceFramework):
     _svc_name_ = paths.SERVICE_NAME
     _svc_display_name_ = paths.SERVICE_DISPLAY_NAME
     _svc_description_ = (
-        "Aplica el bloqueo de programas y sitios de FocusLock. "
+        "Aplica el bloqueo de programas y sitios de TickFence. "
         "No lo detengas: si lo hacés, el bloqueo queda sin vigilar."
     )
 
@@ -42,11 +42,22 @@ class FocusLockService(win32serviceutil.ServiceFramework):
             self._engine = Engine()
             self._engine.start()
         except Exception as exc:  # noqa: BLE001
-            import win32logging
+            # NO usar win32logging aca sin proteccion: pywin32 311+ ya no lo
+            # distribuye, y el import se caia DENTRO del except, tapando el
+            # error real con un ModuleNotFoundError. Un modulo que sirve para
+            # registrar errores no puede ser la unica forma de reportarlos.
+            try:
+                import win32logging  # type: ignore
 
-            win32logging.LogError(
-                0xE001, "FocusLock no pudo arrancar: %s", str(exc)
-            )
+                win32logging.LogError(
+                    0xE001, "TickFence no pudo arrancar: %s", str(exc)
+                )
+            except Exception:  # noqa: BLE001
+                try:
+                    sys.stderr.write(f"[tickfence] no pudo arrancar: {exc}\n")
+                    sys.stderr.flush()
+                except Exception:  # noqa: BLE001
+                    pass
             return
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         try:
@@ -60,7 +71,7 @@ def _service_command() -> str | None:
     """Argumentos del servicio: NINGUNO, a propósito.
 
     `InstallService(pythonClassString=...)` ya escribe la clase en
-    `HKLM\\...\\Services\\FocusLockSvc\\PythonClass`, y pythonservice.exe la lee
+    `HKLM\\...\\Services\\TickFenceSvc\\PythonClass`, y pythonservice.exe la lee
     de ahi. Si se le pasan `exeArgs`, ignora el registro, intenta interpretar
     los argumentos y el servicio muere con 1066 (ERROR_INVALID_FUNCTION).
 
@@ -84,13 +95,13 @@ def install(display: bool = True) -> None:
         uninstall()
 
     win32serviceutil.InstallService(
-        pythonClassString=f"{__package__}.service.FocusLockService",
+        pythonClassString=f"{__package__}.service.TickFenceService",
         serviceName=paths.SERVICE_NAME,
         displayName=paths.SERVICE_DISPLAY_NAME,
         startType=win32service.SERVICE_AUTO_START,
         exeArgs=_service_command(),
         description=(
-            "Aplica el bloqueo de programas y sitios de FocusLock. "
+            "Aplica el bloqueo de programas y sitios de TickFence. "
             "No lo detengas: si lo hacés, el bloqueo queda sin vigilar."
         ),
     )
@@ -202,13 +213,50 @@ def stop(timeout: float = 15.0) -> None:
         win32service.CloseServiceHandle(handle)
 
 
+# Servicios de versiones anteriores del nombre. Tras un rebrandeo el viejo
+# queda corriendo y bloquea la instalacion nueva, pero uninstall() solo conoce
+# el nombre actual: por eso se limpian explicitamente.
+_NOMBRES_ANTIGUOS = ("FocusLockSvc",)
+
+
+def _esta_registrado(nombre: str) -> bool:
+    """True si existe un servicio con ese nombre en el registro de Windows."""
+    try:
+        win32service.OpenService(
+            win32service.OpenSCManager(None, None, win32service.SC_MANAGER_CONNECT),
+            nombre,
+            win32service.SERVICE_QUERY_STATUS,
+        ).Close()
+        return True
+    except Exception:
+        return False
+
+
+def _parar_y_borrar(nombre: str) -> bool:
+    try:
+        win32serviceutil.RemoveService(nombre)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"  no se pudo borrar {nombre}: {exc}", file=sys.stderr)
+        return False
+
+
 def uninstall() -> None:
     """Detiene el servicio, lo borra y limpia las claves IFEO.
 
     Los IFEO se limpian SIEMPRE: si quedan, los programas bloqueados siguen
-    sin arrancar aunque FocusLock ya no exista, y el usuario no tiene forma de
+    sin arrancar aunque TickFence ya no exista, y el usuario no tiene forma de
     recuperarlos sin saber que volver a borrarlos a mano.
     """
+    # Servicios de versiones anteriores del nombre. Tras un rebrandeo el viejo
+    # queda corriendo: ocupa pythonservice.exe y el puerto del servidor HTTP, y
+    # la instalacion nueva falla con "Acceso denegado" y "WinError 10048" sin
+    # que se entienda por que. Hay que limpiarlo tambien.
+    for anterior in _NOMBRES_ANTIGUOS:
+        if anterior != paths.SERVICE_NAME and _esta_registrado(anterior):
+            print(f"  queda el servicio de una version anterior: {anterior}")
+            _parar_y_borrar(anterior)
+
     if _is_installed():
         stop()
         win32serviceutil.RemoveService(paths.SERVICE_NAME)
@@ -254,7 +302,7 @@ def run_console(arm_guard: bool = False) -> int:
         f"  guard   : {'ARMADO (mata procesos)' if arm_guard else 'desactivado (modo seguro)'}",
         flush=True,
     )
-    print(f"FocusLock motor en marcha. Ctrl+C para salir.", flush=True)
+    print(f"TickFence motor en marcha. Ctrl+C para salir.", flush=True)
     print(f"  pipe  : {paths.PIPE_NAME}", flush=True)
     print(f"  estado: http://127.0.0.1:{engine.store.get('server_port', 0)}/state", flush=True)
     try:
@@ -271,4 +319,4 @@ if __name__ == "__main__":
     # pythonservice.exe llama con -u -m focuslock.service --start-service.
     # HandleCommandLine ve "--start-service" y arranca la clase del servicio,
     # que es lo que busca en la funcion ServiceMain.
-    win32serviceutil.HandleCommandLine(FocusLockService)
+    win32serviceutil.HandleCommandLine(TickFenceService)

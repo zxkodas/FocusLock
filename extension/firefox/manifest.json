@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "FocusLock — bloqueo de sitios",
+  "name": "TickFence — bloqueo de sitios",
   "version": "1.3.1",
-  "description": "Bloquea los dominios configurados mientras FocusLock esté bloqueando.",
+  "description": "Bloquea los dominios configurados mientras TickFence esté bloqueando.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "focuslock-agus@users.noreply.github.com",
+      "id": "tickfence-agus@users.noreply.github.com",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]
@@ -27,7 +27,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "FocusLock"
+    "default_title": "TickFence"
   },
   "options_ui": {
     "page": "options.html",

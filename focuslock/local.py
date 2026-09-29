@@ -276,7 +276,7 @@ class LocalBackend:
                     "value": value,
                     "list": items,
                     "message": (
-                        f"{value} es un proceso protegido de Windows: FocusLock "
+                        f"{value} es un proceso protegido de Windows: TickFence "
                         "nunca lo bloquea, y agregarlo a la lista no tendría efecto."
                     ),
                 }

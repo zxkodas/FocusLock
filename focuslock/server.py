@@ -33,7 +33,7 @@ def new_token() -> str:
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server_version = "FocusLock"
+    server_version = "TickFence"
     sys_version = ""
 
     def log_message(self, fmt: str, *args: Any) -> None:  # silencia el log a stderr
@@ -61,10 +61,10 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
-        token = (query.get("token") or [self.headers.get("X-FocusLock-Token", "")])[0]
+        token = (query.get("token") or [self.headers.get("X-TickFence-Token", "")])[0]
 
         if parsed.path == "/health":
-            self._send({"ok": True, "service": "FocusLock"})
+            self._send({"ok": True, "service": "TickFence"})
             return
 
         if not self._origin_ok():

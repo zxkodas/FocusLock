@@ -1,4 +1,4 @@
-"""Arregla los permisos de los archivos de FocusLock en ProgramData.
+"""Arregla los permisos de los archivos de TickFence en ProgramData.
 
 El instalador corre elevado, asi que los archivos que crea quedan con ACL de
 solo lectura para el usuario normal. Consecuencia: la GUI en modo standalone

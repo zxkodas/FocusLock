@@ -70,7 +70,7 @@ def protect(plain: str) -> str:
     out = _BLOB()
     if not _configure_protect()(
         ctypes.byref(blob),
-        "FocusLock",
+        "TickFence",
         None,
         None,
         None,

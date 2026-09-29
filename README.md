@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ FocusLock
+# 🛡️ TickFence
 
 **A focus blocker for Windows that keeps its promises.**
 
@@ -24,7 +24,7 @@ You decide how hard the emergency exit is to push.
 
 ---
 
-FocusLock locks itself to a task manager and will not let you skip the work.
+TickFence locks itself to a task manager and will not let you skip the work.
 It is **not** a parental control and it does not phone home. Everything runs on
 your machine, under your account, against your own TickTick.
 
@@ -52,10 +52,10 @@ hits you — how many tasks, how long, how many words.
 
 ## 🎯 What it actually does
 
-- 🔒 **Locking is opt-in.** Opening FocusLock never blocks anything. Only the
+- 🔒 **Locking is opt-in.** Opening TickFence never blocks anything. Only the
   **Activate lock** button does. The whole point is that *you* start the clock.
 - 🎯 **Credits come only from TickTick.** There is deliberately **no
-  "mark as done" button** in FocusLock — that shortcut would make the app
+  "mark as done" button** in TickFence — that shortcut would make the app
   pointless.
 - 🚪 **The emergency exit exists**, and it is expensive on purpose: you write
   down *why*, and it is saved with a timestamp so you can read your own words
@@ -125,7 +125,7 @@ That is your token: a string starting with `tp_`.
 
 > 🔐 **If you ever paste that token into a chat, a screenshot, or anywhere
 > public — revoke it and make a new one.** A leaked token lets someone read and
-> edit your tasks. FocusLock stores it encrypted with DPAPI, but it cannot help
+> edit your tasks. TickFence stores it encrypted with DPAPI, but it cannot help
 > you once the token has left your machine.
 
 ### Step 3 — Open the app
@@ -150,7 +150,7 @@ Go to the **Ajustes** tab:
 
 Put your project name in **Proyecto de TickTick** — for example `Estudios`.
 
-FocusLock finds it **by name on every poll**, so if you later rename or recreate
+TickFence finds it **by name on every poll**, so if you later rename or recreate
 the project, it keeps working. Any emoji TickTick puts in front of the name is
 ignored.
 
@@ -188,7 +188,7 @@ your editor, your notes, your reference docs in there.
 
 ### Step 9 — Add the browser extension
 
-FocusLock shows the address it expects, under *Ajustes → Extensión del
+TickFence shows the address it expects, under *Ajustes → Extensión del
 navegador*. It looks like `http://127.0.0.1:47821/state?token=…`.
 
 **Chrome / Edge / Brave**
@@ -202,14 +202,16 @@ navegador*. It looks like `http://127.0.0.1:47821/state?token=…`.
 
 **Firefox**
 
-Firefox will not install an unsigned add-on, so pick one:
+Firefox refuses unsigned add-ons, so pick one:
 
-- **Signed (recommended)** — sign through
-  [addons.mozilla.org](https://addons.mozilla.org/developers/), then install
-  the `.xpi` with *Install Add-on From File*. Permanent.
-- **Temporary** — `about:debugging#/runtime/this-firefox` → *Load Temporary
-  Add-on* → `extension/firefox/manifest.json`. **Removed every time you close
-  the browser**, so it is only for testing.
+- **Signed (recommended)** — this build is already signed. Install the `.xpi`
+  with *Install Add-on From File*. **Permanent:** it survives browser
+  restarts and updates. Signing goes through
+  [addons.mozilla.org](https://addons.mozilla.org/developers/), and it
+  covers one version at a time, so future changes need a new submission.
+- **Temporary (development)** — `about:debugging#/runtime/this-firefox` →
+  *Load Temporary Add-on* → `extension/firefox/manifest.json`. **Removed every
+  time you close the browser**, so it is only for testing.
 
 After changing the extension, rebuild the package with:
 
@@ -275,7 +277,7 @@ there when it does.
 
 ```
 ┌─ Your normal session (no admin rights) ────────────┐
-│    FocusLock GUI  ──────named pipe──────┐          │
+│    TickFence GUI  ──────named pipe──────┐          │
 │    Browser extension ─────local HTTP────┤          │
 └──────────────────────────────────────────┼──────────┘
                                            ▼
@@ -319,7 +321,7 @@ enough.**
 >
 > It covers the desktop shell (`explorer.exe`, `userinit.exe`, `sihost.exe`, …),
 > the session core (`lsass.exe`, `csrss.exe`, `winlogon.exe`, `svchost.exe`, …),
-> antivirus, FocusLock itself, and the entire toolkit you would use to undo the
+> antivirus, TickFence itself, and the entire toolkit you would use to undo the
 > block: `cmd.exe`, `powershell.exe`, `taskmgr.exe`, `regedit.exe`,
 > `taskkill.exe`, `shutdown.exe`, `msconfig.exe`, `rundll32.exe`, `mshta.exe`,
 > `wscript.exe`, `cscript.exe`.
@@ -361,11 +363,11 @@ python -m focuslock console --armar-guard
 
 | What | Where |
 |---|---|
-| Configuration | `C:\ProgramData\FocusLock\config.json` |
-| State, credits, logs | `C:\ProgramData\FocusLock\state.json` |
+| Configuration | `C:\ProgramData\TickFence\config.json` |
+| State, credits, logs | `C:\ProgramData\TickFence\state.json` |
 | TickTick token | inside `state.json`, **DPAPI-encrypted** |
-| Service | `FocusLockSvc` — "FocusLock Enforcement Service" |
-| GUI ↔ service | `\\.\pipe\FocusLock` |
+| Service | `TickFenceSvc` — "TickFence Enforcement Service" |
+| GUI ↔ service | `\\.\pipe\TickFence` |
 | Extension endpoint | `http://127.0.0.1:47821/state?token=…` |
 | Extensions | `extension/chrome/`, `extension/firefox/` |
 
@@ -431,7 +433,7 @@ store, so the whole decision logic is testable without a network.
   a back door while the browser runs.
 - **The guard matches by process name.** Two versions of one app under
   different names need blocking both. And if one of them happens to be called
-  `explorer.exe` or `OpenCode.exe`, FocusLock will never touch it.
+  `explorer.exe` or `OpenCode.exe`, TickFence will never touch it.
 - **`console` is a development mode**, not a daily-use mode. Install the
   service for real use.
 - **IFEO needs admin rights.** Without elevation the hard block is off and only
@@ -450,7 +452,7 @@ When you tick a **recurring** TickTick task, it does not get archived. It resets
 to `0` for the next day. There is no *pending → completed* transition left to
 observe.
 
-So FocusLock also credits a task **that was registered and is now gone from the
+So TickFence also credits a task **that was registered and is now gone from the
 project**. Completing every task in the project counts as finishing the work,
 not as a glitch.
 
@@ -470,14 +472,14 @@ What that means in plain terms:
 - ⚖️ **Any version you distribute must also be GPL-3.0, with the source.**
 - ✍️ **The copyright notice and author must be kept.** If you fork this, the
   credit stays.
-- 🚫 You may not sell a closed version of FocusLock. That is the one thing GPL
+- 🚫 You may not sell a closed version of TickFence. That is the one thing GPL
   actually prevents.
 
 **No license can forbid all commercial use.** GPL gets as close as an open
 source license can, and it is the difference between "someone made a paid
 private version of you" and "someone published their fork with your name on it."
 
-If FocusLock helps you and you end up changing it, I would genuinely like to
+If TickFence helps you and you end up changing it, I would genuinely like to
 know. Not an obligation — just a thing that makes the work worth doing.
 
 ---

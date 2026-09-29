@@ -1,4 +1,4 @@
-"""Devuelve FocusLock al estado de fábrica.
+"""Devuelve TickFence al estado de fábrica.
 
 Deja todo desbloqueado y limpio, para empezar de cero: sin créditos, sin
 lectura base, sin ciclo de bloqueo activo y sin claves IFEO. Se puede correr
@@ -116,7 +116,7 @@ def main() -> int:
     print("  bloqueados: (ninguno)")
     print("  bloqueado : False | créditos: 0")
     print()
-    print("Listo. Abrí FocusLock y usá 'Activar bloqueo' cuando quieras probar.")
+    print("Listo. Abrí TickFence y usá 'Activar bloqueo' cuando quieras probar.")
     return 0
 
 

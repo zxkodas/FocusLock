@@ -29,7 +29,7 @@ _spec.loader.exec_module(stub)
 class TestStubMessage(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.state_dir = Path(self.tmp.name) / "FocusLock"
+        self.state_dir = Path(self.tmp.name) / "TickFence"
         self.state_dir.mkdir(parents=True)
         self._old = None
 
@@ -90,7 +90,7 @@ class TestStubMessage(unittest.TestCase):
             else:
                 os.environ["ProgramData"] = old
         self.assertNotIn("faltan", message.lower())
-        self.assertIn("Abrí FocusLock", message)
+        self.assertIn("Abrí TickFence", message)
 
     def test_message_without_state_is_still_useful(self):
         """Si no puede leer el estado, muestra algo genérico y no revienta."""

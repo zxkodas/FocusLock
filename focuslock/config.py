@@ -32,7 +32,7 @@ DEFAULTS: dict[str, Any] = {
         # un dia sin ganas de leer lecturas te dejaria encerrado sin haberlo
         # pedido. Para bloquear algo, agregalo desde la pestana Programas.
         "blocked": [],
-        # NUNCA se bloquean, esten donde esten. Si pones una app_acá, FocusLock
+        # NUNCA se bloquean, esten donde esten. Si pones una app_acá, TickFence
         # no la va a tocar. Nota: explorer.exe NO va acá a proposito: es el shell
         # de Windows y esta protegido a nivel de codigo (rules.NEVER_BLOCK),
         # que es una proteccion que vos no podes desactivar desde la config.
@@ -42,7 +42,7 @@ DEFAULTS: dict[str, Any] = {
             "pycharm64.exe",
             "devenv.exe",
             "opencode.exe",
-            "focuslock.exe",
+            "TickFence.exe",
         ],
         "use_ifeo": True,
     },
@@ -69,7 +69,7 @@ DEFAULTS: dict[str, Any] = {
         "history_limit": 50,
     },
     "general": {
-        # False = arrancar FocusLock NO activa el bloqueo. El usuario tiene que
+        # False = arrancar TickFence NO activa el bloqueo. El usuario tiene que
         # apretar "Activar bloqueo". Esto es lo que evita quedar encerrado sin
         # haberlo pedido.
         "start_locked": False,

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Ejecuta un comando de FocusLock con permisos de administrador.
+    Ejecuta un comando de TickFence con permisos de administrador.
 
 .DESCRIPTION
     Se usa desde una sesion normal: relanza PowerShell con -Verb RunAs, lo que
@@ -29,7 +29,7 @@ $errLog = Join-Path $env:TEMP "focuslock-elevated.err"
 
 # El token viaja por variable de entorno, no por linea de comandos: asi no queda
 # en el historial de PowerShell ni en la lista de procesos.
-if ($Token) { $env:FOCUSLOCK_TOKEN = $Token }
+if ($Token) { $env:TickFence_TOKEN = $Token }
 
 $argList = @(
     "-NoProfile"
@@ -40,7 +40,7 @@ $argList = @(
 `$err = '$($errLog -replace "'", "''")'
 Set-Location -LiteralPath '$($root -replace "'", "''")'
 `$fl = @('-m','focuslock','$Comando')
-if (`$env:FOCUSLOCK_TOKEN) { `$fl += @('--token', `$env:FOCUSLOCK_TOKEN) }
+if (`$env:TickFence_TOKEN) { `$fl += @('--token', `$env:TickFence_TOKEN) }
 # El proceso elevado escribe su propio log: -Verb RunAs no admite
 # -RedirectStandardOutput (son conjuntos de parametros excluyentes).
 & python @fl *> `$out
@@ -72,7 +72,7 @@ if (Test-Path $errLog) {
     if ($e) { Write-Host "--- errores ---" -ForegroundColor Yellow; $e }
 }
 
-Remove-Item Env:\FOCUSLOCK_TOKEN -ErrorAction SilentlyContinue
+Remove-Item Env:\TickFence_TOKEN -ErrorAction SilentlyContinue
 
 if ($code -eq 0) {
     Write-Host ""

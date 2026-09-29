@@ -6,7 +6,7 @@ __pycache__/
 *.py[cod]
 
 # Secretos. Nunca deben entrar al repo.
-# La config y el estado reales viven en C:\ProgramData\FocusLock, pero
+# La config y el estado reales viven en C:\ProgramData\TickFence, pero
 # por si alguien copia uno acá por error:
 config.json
 config.json.bak*

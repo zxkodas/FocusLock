@@ -1,6 +1,6 @@
-"""Acceso a FocusLock desde el menú Inicio y el Escritorio.
+"""Acceso a TickFence desde el menú Inicio y el Escritorio.
 
-Solo accesos directos. NO hay autoinicio: si FocusLock se abriera solo con
+Solo accesos directos. NO hay autoinicio: si TickFence se abriera solo con
 Windows, seamlanzaría en cada inicio de sesión solo para vivir en el área de
 notificación. Abrir la app es una decisión del usuario.
 """
@@ -26,7 +26,7 @@ def _launcher() -> tuple[str, str]:
 
 
 def _link_paths() -> list[Path]:
-    return [START_MENU / "FocusLock.lnk", DESKTOP / "FocusLock.lnk"]
+    return [START_MENU / "TickFence.lnk", DESKTOP / "TickFence.lnk"]
 
 
 def create_shortcuts() -> list[Path]:
@@ -48,7 +48,7 @@ def create_shortcuts() -> list[Path]:
             )
             link.SetPath(target)
             link.SetArguments(args)
-            link.SetDescription("FocusLock - bloqueador de foco")
+            link.SetDescription("TickFence - bloqueador de foco")
             link.SetWorkingDirectory(str(Path.home()))
             link.QueryInterface(pythoncom.IID_IPersistFile).Save(str(link_path), 0)
             created.append(link_path)

@@ -1,4 +1,4 @@
-"""Pruebas de la lógica de FocusLock. Solo stdlib:  python -m tests.test_focuslock"""
+"""Pruebas de la lógica de TickFence. Solo stdlib:  python -m tests.test_focuslock"""
 from __future__ import annotations
 
 import json
@@ -605,10 +605,10 @@ class TestIpcClientErrors(unittest.TestCase):
     """El cliente debe convertir los errores de Win32 en mensajes claros."""
 
     def test_missing_pipe_gives_friendly_error(self):
-        client = IpcClient(pipe=r"\\.\pipe\FocusLockNoExiste_TEST")
+        client = IpcClient(pipe=r"\\.\pipe\TickFenceNoExiste_TEST")
         with self.assertRaises(IpcError) as ctx:
             client.call("status", retries=0)
-        self.assertIn("FocusLock", str(ctx.exception))
+        self.assertIn("TickFence", str(ctx.exception))
 
     def test_retryable_codes_are_defined(self):
         from focuslock.ipc import _RETRYABLE
@@ -776,7 +776,7 @@ class TestConfigReload(unittest.TestCase):
 class TestOptInBlocking(unittest.TestCase):
     """El bloqueo tiene que ser opt-in.
 
-    Requisito explícito del usuario: abrir FocusLock no debe activar el
+    Requisito explícito del usuario: abrir TickFence no debe activar el
     bloqueo. Si arrancara bloqueado, un día sin ganas de hacer lecturas lo
     dejaría encerrado sin haberlo pedido.
     """

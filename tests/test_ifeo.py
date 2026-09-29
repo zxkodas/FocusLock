@@ -3,7 +3,7 @@
 El bug que estas pruebas cubren: el stub ya venia entrecomillado y
 `set_blocker` lo envolvia otra vez. Windows no podia parsear el valor, el
 programa no arrancaba y se veia un error de "parametro no es correcto" en vez
-del aviso de FocusLock.
+del aviso de TickFence.
 
 Estas pruebas no tocan el registro: verifican la construccion del string.
 """

@@ -1,4 +1,4 @@
-"""Muestra los ultimos eventos del servicio FocusLock.
+"""Muestra los ultimos eventos del servicio TickFence.
 
 Cuando el servicio arranca y se detiene al instante, la causa esta en el log de
 eventos de Windows o en la salida de pythonservice.exe. Este comando los junta

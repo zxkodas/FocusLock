@@ -20,9 +20,9 @@ MB_OK = 0x00000000
 MB_ICONWARNING = 0x00000030
 MB_TOPMOST = 0x00040000
 
-TITLE = "FocusLock · bloqueo activo"
+TITLE = "TickFence · bloqueo activo"
 
-HEADER = "Este programa está bloqueado por FocusLock."
+HEADER = "Este programa está bloqueado por TickFence."
 
 
 def _target(argv: list[str]) -> str:
@@ -40,7 +40,7 @@ def _state() -> dict:
     leerlo desde el stub es la unica forma de que el aviso diga algo util.
     """
     base = os.environ.get("ProgramData") or r"C:\ProgramData"
-    path = Path(base) / "FocusLock" / "state.json"
+    path = Path(base) / "TickFence" / "state.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, ValueError):
@@ -73,7 +73,7 @@ def build_message(name: str) -> str:
             )
         else:
             lines.append(
-                "Ya completaste las Lecturas. Abrí FocusLock para que tome "
+                "Ya completaste las Lecturas. Abrí TickFence para que tome "
                 "el cambio (tarda hasta medio minuto)."
             )
     else:
@@ -85,7 +85,7 @@ def build_message(name: str) -> str:
         lines.append("")
 
     lines.append(
-        "Para desbloquear sin completar las Lecturas: abrí FocusLock desde el "
+        "Para desbloquear sin completar las Lecturas: abrí TickFence desde el "
         "acceso directo del Escritorio, o con:\n"
         "    python -m focuslock gui\n"
         "y escribí tu compromiso (300 palabras, 5 minutos de escritura real)."

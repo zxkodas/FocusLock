@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Corre todas las pruebas de FocusLock.
+    Corre todas las pruebas de TickFence.
 
 .DESCRIPTION
     Lanza cada suite en un proceso propio y muestra un resumen. Separar los

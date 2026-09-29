@@ -19,7 +19,7 @@ from .rules import norm_program
 
 def _need_admin(action: str) -> None:
     if not is_windows():
-        print("FocusLock solo funciona en Windows.")
+        print("TickFence solo funciona en Windows.")
         sys.exit(2)
     if not is_elevated():
         print(f"'{action}' necesita permisos de administrador.", file=sys.stderr)
@@ -48,7 +48,7 @@ def cmd_install(args) -> int:
     from .paths import APP_VERSION
     from .service import install as install_service
 
-    print(f"FocusLock {APP_VERSION} — instalación")
+    print(f"TickFence {APP_VERSION} — instalación")
     print(f"  datos en: {paths.program_data()}")
 
     paths.program_data().mkdir(parents=True, exist_ok=True)
@@ -126,7 +126,7 @@ def cmd_uninstall(args) -> int:
         print(f"  liberado: {exe}")
     print("Deteniendo y eliminando el servicio…")
     uninstall_service()
-    print("Listo. Podés borrar C:\\ProgramData\\FocusLock si querés.")
+    print("Listo. Podés borrar C:\\ProgramData\\TickFence si querés.")
     return 0
 
 
@@ -139,7 +139,7 @@ def cmd_console(args) -> int:
     exactamente como se te cae el escritorio.
     """
     if not is_windows():
-        print("FocusLock solo funciona en Windows.")
+        print("TickFence solo funciona en Windows.")
         return 2
 
     from .service import run_console

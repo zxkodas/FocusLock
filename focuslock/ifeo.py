@@ -2,7 +2,7 @@
 
 Cuando el sistema ve la clave IFEO de un .exe con un valor `Debugger`, no
 ejecuta el programa: ejecuta el debugger con la línea de comando original
-pegada atrás. Nosotros apuntamos ese valor a FocusLock, que muestra un aviso y
+pegada atrás. Nosotros apuntamos ese valor a TickFence, que muestra un aviso y
 termina. El programa bloqueado simplemente no llega a arrancar.
 
 Ventaja clave para nuestro caso: el usuario normal NO puede borrar claves de
@@ -104,7 +104,7 @@ def is_blocked(exe: str) -> bool:
 
 
 def list_blocked() -> list[str]:
-    """Todos los .exe que tienen una clave IFEO con Debugger apuntando a FocusLock."""
+    """Todos los .exe que tienen una clave IFEO con Debugger apuntando a TickFence."""
     found: list[str] = []
     try:
         root = winreg.OpenKey(
@@ -125,7 +125,7 @@ def list_blocked() -> list[str]:
             try:
                 with winreg.OpenKey(root, name) as key:
                     value, _ = winreg.QueryValueEx(key, "Debugger")
-                    if value and "focuslock" in str(value).lower():
+                    if value and "focuslock" in str(value).lower() or "tickfence" in str(value).lower():
                         found.append(name)
             except OSError:
                 continue

@@ -1,5 +1,5 @@
 ﻿/*
- * FocusLock - background event page (MV3, Firefox).
+ * TickFence - background event page (MV3, Firefox).
  *
  * Misma logica que la version de Chromium; la diferencia es que Gecko usa
  * event pages con el namespace `browser` basado en promesas.
@@ -11,7 +11,7 @@
 
 const api = typeof browser !== "undefined" && browser.alarms ? browser : chrome;
 
-const POLL_ALARM = "focuslock-poll";
+const POLL_ALARM = "tickfence-poll";
 const POLL_PERIOD_MINUTES = 0.5;
 const RULE_ID_BASE = 1000;
 const RULE_PRIORITY = 1;
@@ -33,7 +33,7 @@ async function setError(error) {
   await api.storage.local.set({ lastError: error, lastErrorAt: Date.now() });
   if (error && store.lastError !== error) {
     // Solo se registra el cambio, no cada ciclo.
-    console.warn("[FocusLock]", error);
+    console.warn("[TickFence]", error);
   }
 }
 

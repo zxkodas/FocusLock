@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Instala FocusLock: dependencias, servicio de Windows y registro inicial.
+    Instala TickFence: dependencias, servicio de Windows y registro inicial.
 
 .DESCRIPTION
     Hay que ejecutarlo UNA vez como Administrador. A partir de ahi, la app
@@ -75,7 +75,7 @@ if ($LASTEXITCODE -ne 0) { Warn "No se pudieron ajustar los permisos: $flPerms" 
 # --------------------------------------------------------------- resumen
 Write-Host ""
 Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "  FocusLock instalado" -ForegroundColor Green
+Write-Host "  TickFence instalado" -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "1) Abrí la app (NO como administrador):"

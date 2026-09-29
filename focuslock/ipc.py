@@ -25,10 +25,10 @@ def _log(message: str) -> None:
     try:
         import win32logging  # type: ignore
 
-        win32logging.LogWarning(0xF001, "FocusLock: %s", message)
+        win32logging.LogWarning(0xF001, "TickFence: %s", message)
     except Exception:
         try:
-            sys.stderr.write(f"[focuslock] {message}\n")
+            sys.stderr.write(f"[tickfence] {message}\n")
             sys.stderr.flush()
         except Exception:
             pass
@@ -110,7 +110,7 @@ class IpcClient:
                     time.sleep(0.4 * (attempt + 1))  # el servicio puede reiniciarse
                     continue
                 raise IpcError(
-                    f"No se pudo contactar al servicio de FocusLock ({self._pipe}). "
+                    f"No se pudo contactar al servicio de TickFence ({self._pipe}). "
                     "Esta corriendo el servicio de Windows?"
                 ) from exc
             finally:

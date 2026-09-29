@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.client = client
         self._data: dict = {}
-        self.setWindowTitle("FocusLock")
+        self.setWindowTitle("TickFence")
         self.resize(880, 640)
         self.setWindowIcon(make_icon())
 
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
         marca = QLabel()
         marca.setPixmap(make_icon(unlocked=True).pixmap(26, 26))
         linea.addWidget(marca)
-        title = QLabel("FocusLock")
+        title = QLabel("TickFence")
         title.setObjectName("sidebarTitle")
         linea.addWidget(title)
         linea.addStretch(1)
@@ -453,7 +453,7 @@ class MainWindow(QMainWindow):
         v.addWidget(self.ifeo_check)
         self.ifeo_note = QLabel(
             "Sin IFEO el bloqueo es mas suave: el vigilante de procesos lo remata "
-            "si logra colarse. Con IFEO hace falta haber instalado FocusLock como "
+            "si logra colarse. Con IFEO hace falta haber instalado TickFence como "
             "administrador."
         )
         self.ifeo_note.setWordWrap(True)
@@ -1178,7 +1178,7 @@ class TrayApp:
         self.window = MainWindow(self.client)
         self.tray = QSystemTrayIcon(make_icon(), self.qt)
         menu = QMenu()
-        menu.addAction("Abrir FocusLock", self.window.show)
+        menu.addAction("Abrir TickFence", self.window.show)
         menu.addAction("Actualizar ahora", lambda: self.window.refresh(force=True))
         menu.addSeparator()
         menu.addAction(self.window.quit_action)
@@ -1205,8 +1205,8 @@ class TrayApp:
         """Sin servicio la app funciona, pero no bloquea. Hay que decirlo."""
         QMessageBox.information(
             self.window,
-            "FocusLock en modo sin bloqueo",
-            "El servicio de Windows no está corriendo, así que FocusLock va a "
+            "TickFence en modo sin bloqueo",
+            "El servicio de Windows no está corriendo, así que TickFence va a "
             "mostrarte el estado de tus Lecturas y a guardar la configuración, "
             "pero NO va a bloquear ningún programa.\n\n"
             "Para que bloquee de verdad, instalalo una vez como administrador:\n\n"

@@ -41,7 +41,7 @@ class ProcessGuard:
         """Marca un nombre de proceso como intocable.
 
         Necesario cuando el ejecutable bloqueado puede ser una copia de
-        FocusLock con otro nombre, o cuando queremos Cubrir el stub de IFEO
+        TickFence con otro nombre, o cuando queremos Cubrir el stub de IFEO
         que Windows lanza con el nombre original del programa.
         """
         normalized = norm_program(name)
@@ -191,6 +191,6 @@ def is_dangerous(exe: str) -> bool:
         return True
     if exe in NEVER_BLOCK or exe in DEFAULT_DANGEROUS:
         return True
-    if exe.startswith("focuslock"):
+    if exe.startswith("focuslock") or exe.startswith("tickfence"):
         return True
     return exe in {norm_program(p) for p in system_executables()}

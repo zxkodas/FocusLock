@@ -229,7 +229,7 @@ class TestInternalImports(unittest.TestCase):
     def test_service_module_exposes_expected_api(self):
         from focuslock import service
 
-        for name in ("install", "uninstall", "run_console", "FocusLockService"):
+        for name in ("install", "uninstall", "run_console", "TickFenceService"):
             self.assertTrue(hasattr(service, name), name)
 
     def test_service_kwargs_match_pywin32_signature(self):
@@ -355,21 +355,21 @@ class TestInternalImports(unittest.TestCase):
         from focuslock import service
         from focuslock.paths import SERVICE_NAME
 
-        cls = service.FocusLockService
+        cls = service.TickFenceService
         self.assertEqual(cls._svc_name_, SERVICE_NAME)
         self.assertEqual(cls._svc_display_name_, service.paths.SERVICE_DISPLAY_NAME)
 
     def test_handlecommandline_can_load_the_class(self):
         """HandleCommandLine es lo que ejecuta Windows; debe poder resolver la clase."""
-        from focuslock.service import FocusLockService
+        from focuslock.service import TickFenceService
 
         # Es lo que hace win32serviceutil al arrancar: resolve (pkg.mod, clase).
-        module_name, _, class_name = "focuslock.service.FocusLockService".rpartition(".")
+        module_name, _, class_name = "focuslock.service.TickFenceService".rpartition(".")
         import importlib
 
         module = importlib.import_module(module_name)
         self.assertTrue(hasattr(module, class_name))
-        self.assertIs(getattr(module, class_name), FocusLockService)
+        self.assertIs(getattr(module, class_name), TickFenceService)
 
 
 class TestEngineCommandSurface(unittest.TestCase):

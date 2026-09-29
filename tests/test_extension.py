@@ -57,7 +57,7 @@ class TestExtensionFiles(unittest.TestCase):
                 raw = (EXT / browser / "manifest.json").read_text(encoding="utf-8")
                 manifest = json.loads(raw)  # revienta si esta mal
                 self.assertEqual(manifest["manifest_version"], 3)
-                self.assertEqual(manifest["name"], "FocusLock — bloqueo de sitios")
+                self.assertEqual(manifest["name"], "TickFence — bloqueo de sitios")
 
     def test_manifest_has_required_permissions(self):
         needed = {"declarativeNetRequest", "tabs", "storage", "alarms"}
@@ -205,7 +205,7 @@ class TestExtensionFiles(unittest.TestCase):
     def test_firefox_declares_data_collection(self):
         """AMO rechaza la subida sin data_collection_permissions.
 
-        Requisito de addons.mozilla.org. FocusLock no recoge datos de nadie,
+        Requisito de addons.mozilla.org. TickFence no recoge datos de nadie,
         asi que declara "none".
         """
         gecko = self._manifest("firefox")["browser_specific_settings"]["gecko"]

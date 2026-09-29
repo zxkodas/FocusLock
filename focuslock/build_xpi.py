@@ -40,7 +40,7 @@ def build(browser: str = "firefox") -> Path:
     manifest = _read_manifest(browser)
     version = manifest.get("version", "0.0.0")
     suffix = "xpi" if browser == "firefox" else "zip"
-    out = OUT_DIR / f"focuslock-{browser}-{version}.{suffix}"
+    out = OUT_DIR / f"tickfence-{browser}-{version}.{suffix}"
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     if out.exists():

@@ -5,19 +5,19 @@ import os
 import sys
 from pathlib import Path
 
-APP_NAME = "FocusLock"
+APP_NAME = "TickFence"
 APP_VERSION = "1.0.0"
 
-SERVICE_NAME = "FocusLockSvc"
-SERVICE_DISPLAY_NAME = "FocusLock Enforcement Service"
-PIPE_NAME = r"\\.\pipe\FocusLock"
+SERVICE_NAME = "TickFenceSvc"
+SERVICE_DISPLAY_NAME = "TickFence Enforcement Service"
+PIPE_NAME = r"\\.\pipe\TickFence"
 
 IFEO_KEY = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 
 # Extensiones de navegador que sirve la app para instalar.
 EXTENSION_IDS = {
-    "chrome": "focuslock-blocker",
-    "firefox": "focuslock-blocker",
+    "chrome": "tickfence-blocker",
+    "firefox": "tickfence-blocker",
 }
 
 

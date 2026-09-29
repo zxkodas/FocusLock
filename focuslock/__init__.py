@@ -1,4 +1,4 @@
-"""FocusLock — bloqueador de foco con TickTick como llave.
+"""TickFence — bloqueador de foco con TickTick como llave.
 
 Comandos de linea de comandos (ver __main__.py):
     install     instala el servicio de Windows (requiere administrador)

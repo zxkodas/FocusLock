@@ -7,7 +7,7 @@ function render(state) {
   const detail = $("detail");
   if (!state) {
     box.className = "state offline";
-    box.textContent = "Sin conexion con FocusLock";
+    box.textContent = "Sin conexion con TickFence";
     detail.textContent =
       "El servicio de Windows no respondio. Verifica que este corriendo y que la direccion sea correcta.";
     return;

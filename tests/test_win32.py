@@ -259,17 +259,17 @@ class TestServiceLifecycle(unittest.TestCase):
 
     def test_service_framework_metadata(self):
         from focuslock.paths import SERVICE_DISPLAY_NAME, SERVICE_NAME
-        from focuslock.service import FocusLockService
+        from focuslock.service import TickFenceService
 
-        self.assertEqual(FocusLockService._svc_name_, SERVICE_NAME)
-        self.assertEqual(FocusLockService._svc_display_name_, SERVICE_DISPLAY_NAME)
-        self.assertTrue(FocusLockService._svc_description_)
+        self.assertEqual(TickFenceService._svc_name_, SERVICE_NAME)
+        self.assertEqual(TickFenceService._svc_display_name_, SERVICE_DISPLAY_NAME)
+        self.assertTrue(TickFenceService._svc_description_)
 
     def test_uninstall_cleans_ifeo(self):
         """Los IFEO se limpian siempre, exista o no el servicio.
 
         Si quedaran, los programas bloqueados seguirian sin arrancar con
-        FocusLock desinstalado, sin forma de recuperarlos desde la app.
+        TickFence desinstalado, sin forma de recuperarlos desde la app.
         """
         path = PKG / "service.py"
         source = path.read_text(encoding="utf-8")
@@ -322,7 +322,7 @@ class TestServiceLifecycle(unittest.TestCase):
         source = inspect.getsource(service.install)
         self.assertIn("pythonClassString", source)
         # La clase tiene que ser la completa: modulo.Clase
-        self.assertIn("FocusLockService", source)
+        self.assertIn("TickFenceService", source)
 
     def test_python_class_string_is_fully_qualified(self):
         """`focuslock.service` solo no alcanza: pywin32 quiere modulo.Clase.
@@ -346,7 +346,7 @@ class TestServiceLifecycle(unittest.TestCase):
             hasattr(module, class_name),
             f"focuslock.service.{class_name} no existe",
         )
-        self.assertEqual(class_name, "FocusLockService")
+        self.assertEqual(class_name, "TickFenceService")
 
     def test_install_service_writes_python_class_to_registry(self):
         """Verifica que pywin32 realmente escribe la clase donde dice."""

@@ -1,7 +1,7 @@
 """Pruebas del vigilante de procesos con procesos reales.
 
 Importante: los procesos de prueba se lanzan como COPIAS de python.exe con un
-nombre propio (FocusLockTest*.exe). Si bloqueamos "python.exe" sin mas, el
+nombre propio (TickFenceTest*.exe). Si bloqueamos "python.exe" sin mas, el
 propio runner de tests seria un objetivo valido y se mataria a si mismo
 (codigo de salida 15, sin salida alguna). Copiar el binario bajo otro nombre
 hace la prueba segura y, de paso, mas realista: es exactamente el caso de
@@ -50,8 +50,8 @@ class TestProcessGuardReal(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="fl-guard-"))
-        cls.blocked_exe = _make_child_binary(cls.tmp, "FocusLockTestBlocked.exe")
-        cls.allowed_exe = _make_child_binary(cls.tmp, "FocusLockTestAllowed.exe")
+        cls.blocked_exe = _make_child_binary(cls.tmp, "TickFenceTestBlocked.exe")
+        cls.allowed_exe = _make_child_binary(cls.tmp, "TickFenceTestAllowed.exe")
 
     @classmethod
     def tearDownClass(cls):
@@ -67,7 +67,7 @@ class TestProcessGuardReal(unittest.TestCase):
     def test_kills_a_blocked_process(self):
         recorder = _Recorder()
         guard = ProcessGuard(
-            should_block=lambda n: match_program(n, ["focuslocktestblocked.exe"], []),
+            should_block=lambda n: match_program(n, ["tickfencetestblocked.exe"], []),
             on_block=recorder,
             interval=0.25,
         )
@@ -82,7 +82,7 @@ class TestProcessGuardReal(unittest.TestCase):
                 recorder.events, "el guardia no detectó el proceso bloqueado en 15s"
             )
             name, pid = recorder.events[0]
-            self.assertEqual(name, "focuslocktestblocked.exe")
+            self.assertEqual(name, "tickfencetestblocked.exe")
 
             deadline = time.time() + 6
             while time.time() < deadline and psutil.pid_exists(pid):
@@ -98,7 +98,7 @@ class TestProcessGuardReal(unittest.TestCase):
         """Con el nombre en la lista de permitidos, el proceso debe sobrevivir."""
         guard = ProcessGuard(
             should_block=lambda n: match_program(
-                n, ["focuslocktestblocked.exe"], ["focuslocktestallowed.exe"]
+                n, ["tickfencetestblocked.exe"], ["tickfencetestallowed.exe"]
             ),
             interval=0.25,
         )
@@ -262,8 +262,8 @@ class TestIsDangerous(unittest.TestCase):
             self.assertTrue(is_dangerous(name), name)
 
     def test_focuslock_itself_is_dangerous(self):
-        self.assertTrue(is_dangerous("FocusLock.exe"))
-        self.assertTrue(is_dangerous("focuslock_svc.exe"))
+        self.assertTrue(is_dangerous("TickFence.exe"))
+        self.assertTrue(is_dangerous("tickfence_svc.exe"))
 
     def test_ordinary_apps_are_not_dangerous(self):
         for name in ("steam.exe", "discord.exe", "chrome.exe", "firefox.exe"):

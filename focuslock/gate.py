@@ -220,7 +220,7 @@ class Gate:
             raise TickTickError(
                 f"No se encontró el proyecto '{name}' en tu TickTick. "
                 f"Proyectos disponibles: {available}. "
-                "Corregí el nombre en FocusLock → Ajustes."
+                "Corregí el nombre en TickFence → Ajustes."
             )
 
         if explicit:
@@ -229,7 +229,7 @@ class Gate:
                     return explicit
             raise TickTickError(
                 f"El proyecto {explicit} ya no existe en TickTick. "
-                "Indicá un nombre en FocusLock → Ajustes."
+                "Indicá un nombre en TickFence → Ajustes."
             )
 
         raise TickTickError("No configuraste ningún proyecto de TickTick.")
@@ -244,7 +244,7 @@ class Gate:
 
             if not self._client.configured:
                 self._status.error = (
-                    "Sin token de TickTick. Abrí FocusLock → Ajustes y pegalo."
+                    "Sin token de TickTick. Abrí TickFence → Ajustes y pegalo."
                 )
                 return self._status
 

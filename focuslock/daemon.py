@@ -70,7 +70,7 @@ class Engine:
         self.client = TickTickClient(secrets.wipe(self.store.get("ticktick_token", "")))
         self.gate = Gate(self.client, self.config, self.store)
         self.guard = ProcessGuard(self._should_block, self._on_block)
-        # El proceso de FocusLock y OpenCode quedan intocables siempre.
+        # El proceso de TickFence y OpenCode quedan intocables siempre.
         self.guard.protect_name("explorer.exe")
         self.guard.protect_name("opencode.exe")
         self.server = StateServer(self.state_payload, self._server_token())
@@ -460,7 +460,7 @@ class Engine:
                 "value": value,
                 "list": items,
                 "message": (
-                    f"{value} es un proceso protegido de Windows: FocusLock nunca "
+                    f"{value} es un proceso protegido de Windows: TickFence nunca "
                     "lo bloquea, y agregarlo a la lista no tendria ningun efecto."
                 ),
             }

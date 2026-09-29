@@ -8,7 +8,7 @@ import urllib.request
 from typing import Any
 
 BASE = "https://api.ticktick.com/open/v1"
-USER_AGENT = "FocusLock/1.0"
+USER_AGENT = "TickFence/1.0"
 DEFAULT_TIMEOUT = 20
 
 

@@ -29,7 +29,7 @@ pipe and the HTTP server do not — that separation is the design.
 ## Architecture facts that filenames do not tell you
 
 - **The Windows service owns the block, not the GUI.** It runs as `LocalSystem`.
-  The GUI is just a client over the named pipe `\\.\pipe\FocusLock`. This is why
+  The GUI is just a client over the named pipe `\\.\pipe\TickFence`. This is why
   the GUI needs no admin rights.
 - **IFEO is the hard layer.** `ifeo.py` writes
   `HKLM\...\Image File Execution Options\<exe>` with a `Debugger` value pointing
@@ -65,7 +65,7 @@ pipe and the HTTP server do not — that separation is the design.
   otherwise.
 - **`general.start_locked` must stay `false`.** Launching the app must never
   block anything on its own.
-- No autostart on boot, and no "mark as done" button in FocusLock — credits come
+- No autostart on boot, and no "mark as done" button in TickFence — credits come
   only from TickTick. Both were explicit product decisions.
 
 ## The unlock rule, and the part that is easy to get wrong
@@ -103,7 +103,7 @@ accumulate time. An idle gap over 15 min restarts the session.
   `QApplication` and Qt only allows one per process; sharing would break the
   second suite.
 - **`test_guard` kills real processes.** It copies `pythonw.exe` to
-  `FocusLockTestBlocked.exe` / `FocusLockTestAllowed.exe` and lets a real
+  `TickFenceTestBlocked.exe` / `TickFenceTestAllowed.exe` and lets a real
   `ProcessGuard` terminate them. It protects only its own PID. It is the slow
   suite.
 - **`test_win32` is not redundant.** It walks the source and checks every
@@ -120,7 +120,7 @@ accumulate time. An idle gap over 15 min restarts the session.
 A real TickTick token was hardcoded in a test once and had to be removed from
 history. Use a fake with the right shape, e.g. `"tp_" + "0" * 32`. `.gitignore`
 already excludes `config.json`, `state.json` and the `*.bak*` backups, which hold
-the DPAPI-encrypted token and live in `C:\ProgramData\FocusLock`.
+the DPAPI-encrypted token and live in `C:\ProgramData\TickFence`.
 
 ## Permissions gotcha
 
