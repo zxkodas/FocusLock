@@ -21,3 +21,10 @@ state.json.bak*
 .idea/
 Thumbs.db
 desktop.ini
+
+# Skills de agentes: contenido de terceros, 1.2 MB que no aporta al proyecto.
+# La skill se sigue usando local; solo deja de subirse a GitHub.
+# Ojo: .agents/skills/*/AGENTS.md entra en conflicto con el AGENTS.md de la
+# raiz, asi que conviene que no quede trackeado.
+.agents/
+skills-lock.json
