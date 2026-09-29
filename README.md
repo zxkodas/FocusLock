@@ -103,15 +103,21 @@ Both are the same program. Pick the one you will actually keep.
 
 ### Step 1 — Install the service
 
-Open **PowerShell as Administrator**, in this folder:
+**The easy way:** download `TickFence-Setup-1.0.0.exe` from the
+[releases page](https://github.com/zxkodas/TickFence/releases), run it, and
+accept the Windows prompt. It asks for Administrator once, then does
+everything below for you. It is **not code-signed**, so SmartScreen will warn
+you; that warning is expected.
+
+**Or from source**, in **PowerShell as Administrator**, in this folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-This installs dependencies, registers the Windows service, starts it, and
-checks that it answers. You only do this once, and you only need admin rights
-this one time.
+Either way this installs dependencies, registers the Windows service, starts
+it, and checks that it answers. You only do it once, and admin rights are only
+needed that one time.
 
 ### Step 2 — Get a TickTick token
 
