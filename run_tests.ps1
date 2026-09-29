@@ -11,7 +11,7 @@
     controlada, pero ninguno toca explorer.exe ni OpenCode.exe: esa garantia
     esta en rules.NEVER_BLOCK y hay tests que la verifican.
 
-    Sin argumentos corren las 8 suites. -Quick deja afuera test_guard, que es
+    Sin argumentos corren las 9 suites. -Quick deja afuera test_guard, que es
     la unica que tarda de verdad.
 #>
 [CmdletBinding()]
@@ -24,7 +24,7 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $root
 
-# Las 8 suites. Cada una va en su propio proceso (ver .DESCRIPTION).
+# Las 9 suites. Cada una va en su propio proceso (ver .DESCRIPTION).
 $suites = @(
     "tests.test_focuslock"
     "tests.test_win32"
@@ -33,6 +33,7 @@ $suites = @(
     "tests.test_stub"
     "tests.test_ui"
     "tests.test_extension"
+    "tests.test_installer"
 )
 if (-not $Quick) { $suites += "tests.test_guard" }
 

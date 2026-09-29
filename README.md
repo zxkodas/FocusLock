@@ -15,10 +15,12 @@ You decide how hard the emergency exit is to push.
 ![platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?logo=windows&logoColor=white)
 ![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![gui](https://img.shields.io/badge/GUI-PySide6-2D8BC0)
-![tests](https://img.shields.io/badge/tests-196%20passing-16A34A)
+![tests](https://img.shields.io/badge/tests-234%20passing-16A34A)
 ![chrome](https://img.shields.io/badge/Chrome%20%2F%20Edge%20%2F%20Brave-MV3-4285F4?logo=googlechrome&logoColor=white)
 ![firefox](https://img.shields.io/badge/Firefox-MV3-FF7139F?logo=firefoxbrowser&logoColor=white)
 ![service](https://img.shields.io/badge/enforcement-Windows%20Service%20%2B%20IFEO-6E7681)
+![installer](https://img.shields.io/badge/installer-.exe-3D8B8B)
+![license](https://img.shields.io/badge/license-GPL--3.0-blue)
 
 </div>
 
@@ -40,13 +42,10 @@ hits you — how many tasks, how long, how many words.
 
 ![Settings tab](docs/screenshots/04-ajustes.png)
 
-**The main window while a lock is active:**
+**The main window.** The lock is off by default — it only turns on when you ask
+for it, and it turns itself off as soon as the tasks are done:
 
-![Main window, locked](docs/screenshots/01-estado-bloqueado.png)
-
-**What a blocked program does:**
-
-![Blocked program notice](docs/screenshots/07-programa-bloqueado.png)
+![Main window](docs/screenshots/01-estado.png)
 
 ---
 
@@ -219,9 +218,9 @@ After changing the extension, rebuild the package with:
 python -m focuslock.build_xpi
 ```
 
-**What a blocked site looks like**, with the lock active:
-
-![Blocked site](docs/screenshots/08-sitio-bloqueado.png)
+**What a blocked site looks like.** The extension replaces the page with a
+plain notice naming the app, how many tasks are still owed, and the two ways
+out — finish the tasks, or use the emergency unlock.
 
 ### Step 10 — Start a session
 
@@ -251,8 +250,6 @@ that are deliberately awkward to answer honestly.
 | 4 | **¿Qué vas a hacer después?** | 30 words |
 
 Plus a one-line summary that gets stored in the log.
-
-![Emergency dialog](docs/screenshots/05-emergencia.png)
 
 Three details make this hard to fake, and they are deliberate:
 
@@ -348,7 +345,9 @@ This design came from a real bug: an earlier process guard killed
 | `python -m focuslock ifeo-reconcile` | Clean orphaned IFEO keys (service can be stopped) |
 | `python -m focuslock console` | Run the engine in the foreground, **guard off** |
 
-![doctor output](docs/screenshots/09-doctor.png)
+Run `doctor` first when something misbehaves: it reports the service state, the
+IFEO keys, the pipe, the HTTP server, and whether the installed copy in
+site-packages matches your working folder.
 
 **Why `console` will not arm the guard.** It runs the engine **in your desktop
 session**, not as a service. If the process guard ran there it would kill

@@ -1,10 +1,13 @@
 ﻿/*
- * TickFence - background event page (MV3, Firefox).
+ * TickFence - background (MV3).
  *
- * Misma logica que la version de Chromium; la diferencia es que Gecko usa
- * event pages con el namespace `browser` basado en promesas.
+ * Este archivo es el MISMO en extension/chrome/ y en extension/firefox/, y
+ * test_extension lo verifica. La logica no se duplica: la unica diferencia
+ * entre los dos navegadores esta en el manifest (background.service_worker
+ * en Chrome, background.scripts en Firefox) y en el shim de mas abajo, que
+ * elige entre el namespace `browser` y el `chrome`.
  *
- * OJO con el diseño: en Firefox esta pagina se APAGA sola cuando no hay nada
+ * OJO con el diseño: en Firefox la pagina se APAGA sola cuando no hay nada
  * que hacer. Por eso el estado se guarda en storage en cada ciclo, y el popup
  * lo lee de ahi primero en vez de depender de que el worker este vivo.
  */
