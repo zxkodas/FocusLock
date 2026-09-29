@@ -459,10 +459,31 @@ price of TickTick not exposing the completed state of a recurring task.
 
 ---
 
+## 📜 License
+
+**GPL-3.0-or-later.** See [`LICENSE`](LICENSE).
+
+What that means in plain terms:
+
+- ✅ Use it, study it, change it, improve it — anything.
+- ✅ Share it, including commercially.
+- ⚖️ **Any version you distribute must also be GPL-3.0, with the source.**
+- ✍️ **The copyright notice and author must be kept.** If you fork this, the
+  credit stays.
+- 🚫 You may not sell a closed version of FocusLock. That is the one thing GPL
+  actually prevents.
+
+**No license can forbid all commercial use.** GPL gets as close as an open
+source license can, and it is the difference between "someone made a paid
+private version of you" and "someone published their fork with your name on it."
+
+If FocusLock helps you and you end up changing it, I would genuinely like to
+know. Not an obligation — just a thing that makes the work worth doing.
+
+---
+
 ## 📝 Notes
 
 - This README is in English, but the **GUI and the code comments are in
   Spanish**. The tabs are `Estado`, `Programas`, `Sitios`, `Ajustes` and
   `Bitácora`.
-- No license file yet. Add one before making the repository public, or nobody
-  will legally be able to use it.

@@ -5,8 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "focuslock"
 version = "1.0.0"
-description = "Bloqueador de foco para Windows con TickTick como llave"
+description = "A focus blocker for Windows, unlocked by completing tasks in TickTick"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
 dependencies = [
     "PySide6>=6.10",
     "psutil>=6.0",
