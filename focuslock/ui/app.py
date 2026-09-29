@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
     QSystemTrayIcon,
-    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -34,37 +34,88 @@ from PySide6.QtWidgets import (
 from ..ipc import IpcClient
 from .emergency import EmergencyDialog
 
-# Los colores de esta hoja no se eligen a ojo: hay ratios medidos.
+# Gris oscuro NEUTRO, sin tinte azul. Jerarquia de TickTick, contencion de
+# Apple: un solo acento, y en tres lugares.
 #
-#   texto  #e6e8ee sobre fondo #15171c       14.64:1   (pide 4.5)
-#   hint   #8f98ad sobre fondo #15171c        6.20:1   (pide 4.5)
-#   blanco sobre primario #2a6df4            4.57:1   (pide 4.5)
-#   blanco sobre hover    #2560d8            5.61:1   (pide 4.5)
-#   borde  #656f88 sobre #15171c / #1b1e25    3.57:1 / 3.32:1  (pide 3, borde)
+# Ratios medidos, no estimados a ojo:
+#   texto   #eceef1 sobre fondo #1c1d20       14.50:1  (pide 4.5)
+#   texto   #eceef1 sobre superficie #242629  13.05:1  (pide 4.5)
+#   texto 2 #9ea3ab sobre fondo #1c1d20        6.65:1  (pide 4.5)
+#   texto 2 #9ea3ab sobre sidebar #161719      7.07:1  (pide 4.5)
+#   blanco  sobre acento  #2f6fe0              4.70:1  (pide 4.5)
+#   blanco  sobre hover   #2560d8              6.29:1  (pide 4.5)
+#   blanco  sobre peligro #b8503a              4.95:1  (pide 4.5)
+#   borde   #6e737d sobre superficie #242629   3.19:1  (pide 3, borde de control)
+#   borde   #6e737d sobre fondo #1c1d20        3.54:1  (pide 3, borde de control)
 #
-# El hover OSCURECE a proposito: aclarar el azul lo aleja del blanco y
-# dejaba el texto en 3.93:1, por debajo del minimo. El borde subio de
-# #656f88 porque el anterior daba 1.24:1 y los campos de texto quedaban
-# dibujados por una linea casi invisible.
+# DIVIDER no es un borde de control sino decorativo, por eso puede ser tenue.
 # tests/test_ui.py::TestStyleContrast falla si alguno de estos numeros se mueve.
 STYLE = """
-QWidget { background:#15171c; color:#e6e8ee; font-size:13px; }
-QGroupBox { border:1px solid #656f88; border-radius:8px; margin-top:14px; padding:10px; }
-QGroupBox::title { subcontrol-origin: margin; left:10px; color:#8f98ad; }
-QLabel#hint { color:#8f98ad; }
+QWidget { background:#1c1d20; color:#eceef1; font-size:13px; }
+
+#sidebar      { background:#161719; border-right:1px solid #2b2d31; }
+#sidebarTitle { font-size:20px; font-weight:600; }
+#sidebarSub   { font-size:12px; color:#9ea3ab; }
+#sidebarFoot  { font-size:12px; color:#9ea3ab; }
+#pageTitle    { font-size:26px; font-weight:600; }
+
+#nav { background:transparent; border:none; outline:none; }
+#nav::item {
+  color:#9ea3ab; padding:11px 12px; margin:2px 10px; border-radius:10px; }
+#nav::item:hover    { background:#2c2e32; color:#eceef1; }
+#nav::item:selected { background:#2f6fe0; color:#ffffff; }
+
+QGroupBox {
+  background:#242629; border:1px solid #2b2d31; border-radius:14px;
+  margin-top:14px; padding:18px; }
+QGroupBox::title {
+  subcontrol-origin: margin; left:18px; padding:0 6px;
+  color:#eceef1; font-size:15px; font-weight:600; }
+
+QLabel#hint  { color:#9ea3ab; }
+QLabel#count { color:#eceef1; font-size:14px; font-weight:600; }
+
+/* Sin esto los QLabel heredan el fondo de QWidget y se pintan como parches
+   negros sobre las tarjetas #242629. */
+QLabel, QCheckBox { background:transparent; }
+QGroupBox QLabel { background:transparent; }
+
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QListWidget {
-  background:#1b1e25; border:1px solid #656f88; border-radius:6px; padding:6px; }
-QPushButton { background:#2a6df4; border:none; border-radius:6px; padding:8px 14px; color:white; }
-QPushButton:hover { background:#2560d8; }
-QPushButton:disabled { background:#333842; color:#6b7280; }
-QPushButton#danger { background:#b3402f; }
-QPushButton#ghost { background:#242832; }
-QTabWidget::pane { border:1px solid #656f88; border-radius:8px; }
-QTabBar::tab { background:#1b1e25; padding:9px 18px; border-top-left-radius:6px;
-               border-top-right-radius:6px; }
-QTabBar::tab:selected { background:#2a6df4; color:white; }
-QProgressBar { border:1px solid #656f88; border-radius:6px; text-align:center; background:#1b1e25; }
-QProgressBar::chunk { background:#2a6df4; border-radius:5px; }
+  background:#242629; color:#eceef1;
+  border:1px solid #6e737d; border-radius:8px; padding:7px;
+  selection-background-color:#2f6fe0; }
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {
+  border:1px solid #2f6fe0; }
+
+QPushButton {
+  background:#2f6fe0; border:none; border-radius:10px;
+  padding:11px 18px; color:#ffffff; font-size:14px; }
+QPushButton:hover   { background:#2560d8; }
+QPushButton:pressed { background:#1f52ba; }
+QPushButton:disabled {
+  background:#242629; color:#6c7078; border:1px solid #2b2d31; }
+QPushButton#danger { background:#b8503a; }
+QPushButton#danger:hover { background:#a84530; }
+QPushButton#danger:disabled {
+  background:#242629; color:#6c7078; border:1px solid #2b2d31; }
+QPushButton#ghost {
+  background:#242629; border:1px solid #6e737d; color:#eceef1; }
+QPushButton#ghost:hover { background:#2c2e32; }
+QPushButton#ghost:disabled {
+  background:#1c1d20; color:#6c7078; border:1px solid #2b2d31; }
+
+QProgressBar {
+  border:none; border-radius:7px; text-align:center;
+  background:#2c2e32; min-height:14px; max-height:14px; }
+QProgressBar::chunk { background:#2f6fe0; border-radius:7px; }
+
+QScrollBar:vertical { background:transparent; width:10px; margin:0; }
+QScrollBar::handle:vertical {
+  background:#3a3d42; border-radius:5px; min-height:30px; }
+QScrollBar::handle:vertical:hover { background:#4a4e55; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+  background:transparent; }
 """
 
 
@@ -103,21 +154,79 @@ class MainWindow(QMainWindow):
 
         root = QWidget()
         self.setCentralWidget(root)
-        layout = QVBoxLayout(root)
+        outer = QHBoxLayout(root)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # --- barra de estado a lo ancho, arriba de todo ------------------------
+        shell = QWidget()
+        shell_layout = QVBoxLayout(shell)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
 
         self.banner = QLabel()
         self.banner.setWordWrap(True)
         self.banner.setMinimumHeight(64)
         self.banner.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.banner)
+        self.banner.setContentsMargins(24, 14, 24, 14)
+        shell_layout.addWidget(self.banner)
 
-        self.tabs = QTabWidget()
-        layout.addWidget(self.tabs, 1)
-        self.tabs.addTab(self._tab_status(), "Estado")
-        self.tabs.addTab(self._tab_programs(), "Programas")
-        self.tabs.addTab(self._tab_sites(), "Sitios")
-        self.tabs.addTab(self._tab_settings(), "Ajustes")
-        self.tabs.addTab(self._tab_history(), "Bitácora")
+        body = QWidget()
+        body_layout = QHBoxLayout(body)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
+
+        # --- menu lateral ----------------------------------------------------
+        sidebar = QWidget()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(244)
+        side = QVBoxLayout(sidebar)
+        side.setContentsMargins(0, 26, 0, 18)
+        side.setSpacing(0)
+
+        brand = QVBoxLayout()
+        brand.setContentsMargins(28, 0, 24, 0)
+        brand.setSpacing(0)
+        title = QLabel("FocusLock")
+        title.setObjectName("sidebarTitle")
+        sub = QLabel("Frená lo que elijas hasta trabajar")
+        sub.setObjectName("sidebarSub")
+        sub.setWordWrap(True)
+        brand.addWidget(title)
+        brand.addSpacing(2)
+        brand.addWidget(sub)
+        wrapper = QWidget()
+        wrapper.setLayout(brand)
+        wrapper.setContentsMargins(0, 0, 0, 0)
+        side.addWidget(wrapper)
+
+        side.addSpacing(28)
+
+        self.nav = QListWidget()
+        self.nav.setObjectName("nav")
+        self.nav.setFocusPolicy(Qt.StrongFocus)
+        self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        for etiqueta in self.PAGINAS:
+            self.nav.addItem(etiqueta)
+        self.nav.setCurrentRow(0)
+        self.nav.currentRowChanged.connect(self._ir_a)
+        side.addWidget(self.nav, 1)
+
+        foot = QLabel("Servicio: LocalSystem")
+        foot.setObjectName("sidebarFoot")
+        foot.setContentsMargins(28, 0, 0, 0)
+        side.addWidget(foot)
+
+        body_layout.addWidget(sidebar)
+
+        # --- contenido -------------------------------------------------------
+        self.stack = QStackedWidget()
+        for etiqueta in self.PAGINAS:
+            self.stack.addWidget(self._pagina(etiqueta))
+        body_layout.addWidget(self.stack, 1)
+
+        shell_layout.addWidget(body, 1)
+        outer.addWidget(shell)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.refresh)
@@ -125,6 +234,26 @@ class MainWindow(QMainWindow):
 
         self.quit_action = QAction("Salir", self)
         self.quit_action.triggered.connect(self._quit)
+
+    # ------------------------------------------------------------- navegacion
+    PAGINAS = ("Estado", "Programas", "Sitios", "Ajustes", "Bitácora")
+
+    def _pagina(self, etiqueta: str) -> QWidget:
+        """Devuelve la pagina ya construida, con su titulo."""
+        constructor = {
+            "Estado": self._tab_status,
+            "Programas": self._tab_programs,
+            "Sitios": self._tab_sites,
+            "Ajustes": self._tab_settings,
+            "Bitácora": self._tab_history,
+        }[etiqueta]
+        page = constructor()
+        page.setObjectName("page")
+        return page
+
+    def _ir_a(self, fila: int) -> None:
+        if 0 <= fila < self.stack.count():
+            self.stack.setCurrentIndex(fila)
 
     # ------------------------------------------------------------------ Estado
     def _tab_status(self) -> QWidget:

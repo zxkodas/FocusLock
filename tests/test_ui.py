@@ -161,18 +161,48 @@ class TestMainWindow(QtTestCase):
         self.window.show()
 
     def tearDown(self):
-        self.window.tabs.setCurrentIndex(0)
+        self.window.nav.setCurrentRow(0)
         self.window._timer.stop()
         self.window.close()
         self.window.deleteLater()
 
     def test_window_builds(self):
-        self.assertIsNotNone(self.window.tabs)
-        self.assertEqual(self.window.tabs.count(), 5)
-        titles = [self.window.tabs.tabText(i) for i in range(5)]
+        self.assertIsNotNone(self.window.nav)
+        self.assertIsNotNone(self.window.stack)
+        self.assertEqual(self.window.nav.count(), 5)
+        self.assertEqual(self.window.stack.count(), 5)
+        titles = [
+            self.window.nav.item(i).text()
+            for i in range(self.window.nav.count())
+        ]
         self.assertEqual(
             titles, ["Estado", "Programas", "Sitios", "Ajustes", "Bitácora"]
         )
+
+    def test_nav_and_stack_stay_in_sync(self):
+        """Cada fila del menu tiene que mostrar su pagina."""
+        for fila in range(self.window.stack.count()):
+            with self.subTest(fila=fila):
+                self.window.nav.setCurrentRow(fila)
+                self.assertEqual(self.window.stack.currentIndex(), fila)
+
+    def test_nav_ignores_out_of_range(self):
+        """Una fila imposible no debe romper la app."""
+        self.window.nav.setCurrentRow(99)
+        self.window.nav.setCurrentRow(-1)
+        self.assertLess(
+            self.window.stack.currentIndex(), self.window.stack.count()
+        )
+
+    def test_the_tab_bar_is_gone_for_good(self):
+        """QTabWidget no debe volver: el diseno aprobado es menu lateral."""
+        import inspect
+
+        from focuslock.ui import app as app_mod
+
+        source = inspect.getsource(app_mod)
+        self.assertNotIn("QTabWidget", source)
+        self.assertNotIn("QTabBar", source)
 
     def test_refresh_renders_locked_state(self):
         self.client.locked = True
@@ -506,15 +536,17 @@ class TestStyleContrast(unittest.TestCase):
 
     # (nombre, primer plano, fondo, minimo WCAG AA)
     CASES = (
-        ("texto normal sobre fondo", "#e6e8ee", "#15171c", 4.5),
-        ("texto normal sobre superficie", "#e6e8ee", "#1b1e25", 4.5),
-        ("texto secundario sobre fondo", "#8f98ad", "#15171c", 4.5),
-        ("texto secundario sobre superficie", "#8f98ad", "#1b1e25", 4.5),
-        ("blanco sobre primario", "#ffffff", "#2a6df4", 4.5),
-        ("blanco sobre hover del primario", "#ffffff", "#2560d8", 4.5),
-        ("blanco sobre peligro", "#ffffff", "#b3402f", 4.5),
-        ("borde sobre fondo", "#656f88", "#15171c", 3.0),
-        ("borde sobre superficie", "#656f88", "#1b1e25", 3.0),
+        ("texto normal sobre fondo", "#eceef1", "#1c1d20", 4.5),
+        ("texto normal sobre superficie", "#eceef1", "#242629", 4.5),
+        ("texto secundario sobre fondo", "#9ea3ab", "#1c1d20", 4.5),
+        ("texto secundario sobre superficie", "#9ea3ab", "#242629", 4.5),
+        ("texto secundario sobre sidebar", "#9ea3ab", "#161719", 4.5),
+        ("texto sobre sidebar", "#eceef1", "#161719", 4.5),
+        ("blanco sobre acento", "#ffffff", "#2f6fe0", 4.5),
+        ("blanco sobre hover del acento", "#ffffff", "#2560d8", 4.5),
+        ("blanco sobre peligro", "#ffffff", "#b8503a", 4.5),
+        ("borde sobre superficie", "#6e737d", "#242629", 3.0),
+        ("borde sobre fondo", "#6e737d", "#1c1d20", 3.0),
     )
 
     @staticmethod
@@ -549,7 +581,7 @@ class TestStyleContrast(unittest.TestCase):
         El hover solia aclarar el azul (#3b7bf5) y el texto blanco caia a
         3.93:1. Oscurecer es lo correcto.
         """
-        resting = self._ratio("#ffffff", "#2a6df4")
+        resting = self._ratio("#ffffff", "#2f6fe0")
         hover = self._ratio("#ffffff", "#2560d8")
         self.assertGreater(hover, resting)
 
@@ -560,7 +592,7 @@ class TestStyleContrast(unittest.TestCase):
         sheet = STYLE.lower()
         for _, fg, _bg, _minimum in self.CASES:
             if fg == "#ffffff":
-                continue  # el blanco viene de `color:white`, no de un hex
+                continue  # el blanco viene de `color:#ffffff`, no de un hex
             with self.subTest(color=fg):
                 self.assertIn(fg, sheet)
 
