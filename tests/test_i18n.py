@@ -28,6 +28,7 @@ ARCHIVOS_TRADUCIBLES = (
     "focuslock/ui/emergency.py",
     "focuslock/emergency.py",
     "focuslock/daemon.py",
+    "focuslock/gate.py",
     "focuslock/__main__.py",
 )
 STUB = "focuslock/stub.py"

@@ -807,10 +807,10 @@ class MainWindow(QMainWindow):
             setattr(self, attr, area)
             v.addWidget(card, 1)
 
-        bloque("Desbloqueos de emergencia", "hist_em")
-        bloque("Intentos de bloqueo de procesos", "hist_blocks")
+        bloque(tr("Emergency unlocks"), "hist_em")
+        bloque(tr("Blocked process attempts"), "hist_blocks")
 
-        refresh = QPushButton("Actualizar bitácora")
+        refresh = QPushButton(tr("Refresh log"))
         refresh.setObjectName("ghost")
         refresh.clicked.connect(self._load_history)
         fila = QHBoxLayout()
@@ -839,18 +839,20 @@ class MainWindow(QMainWindow):
         credits = int(data.get("credits", 0))
         if locked:
             self.progress.setValue(int(min(1.0, credits / required) * 100))
-            self.count.setText(f"{credits} de {required} tareas")
+            self.count.setText(
+                tr("{a} of {b} tasks").format(a=credits, b=required)
+            )
             faltan = max(0, required - credits)
             self.estado_sub.setText(
-                "Te faltan "
-                + (f"{faltan} tarea" if faltan == 1 else f"{faltan} tareas")
-                + " para desbloquear."
+                tr("{n} task left to unlock.").format(n=faltan)
+                if faltan == 1
+                else tr("{n} tasks left to unlock.").format(n=faltan)
             )
         else:
             self.progress.setValue(100)
-            self.count.setText("Desbloqueado")
+            self.count.setText(tr("Unlocked"))
             self.estado_sub.setText(
-                "No hay bloqueo activo. Podés usar lo que quieras."
+                tr("No lock is active. Use whatever you want.")
             )
 
         checked = float(data.get("checked_at") or 0)
@@ -860,14 +862,14 @@ class MainWindow(QMainWindow):
         if not fresh:
             # Todavía no se consultó TickTick. Decir "no hay Lecturas
             # pendientes" sería inventar: lo correcto es decir que no sabe.
-            self.modules.setText("Consultando TickTick…")
+            self.modules.setText(tr("Asking TickTick…"))
         elif mods:
             self.modules.setText(
-                "Pendientes por módulo: "
+                tr("Pending by module: ")
                 + " · ".join(f"{name} ({n})" for name, n in mods.items())
             )
         else:
-            self.modules.setText("No hay Lecturas pendientes en TickTick.")
+            self.modules.setText(tr("No Readings pending in TickTick."))
 
         if data.get("error"):
             self.modules.setText(f"TickTick: {data['error']}")
@@ -875,18 +877,18 @@ class MainWindow(QMainWindow):
             # el contador se queda en 0 y no se explica por que.
             self.banner.setStyleSheet(self._ERROR_STYLE)
             self._aviso(
-                "<b style='color:#e5484d'>ERROR al consultar TickTick</b><br>"
-                f"{data['error']}<br>"
-                "El contador de Lecturas no se está actualizando."
+                tr("<b style='color:#e5484d'>Error asking TickTick</b><br>")
+                + f"{data['error']}<br>"
+                + tr("The Reading count is not being updated.")
             )
 
         # El boton solo activa; no hay forma de desactivar desde la UI.
         if hasattr(self, "btn_toggle"):
             if locked:
-                self.btn_toggle.setText("Bloqueo activo")
+                self.btn_toggle.setText(tr("Lock active"))
                 self.btn_toggle.setEnabled(False)
             else:
-                self.btn_toggle.setText("Activar bloqueo")
+                self.btn_toggle.setText(tr("Turn on the lock"))
                 self.btn_toggle.setEnabled(True)
 
         # La emergencia solo tiene sentido con un bloqueo activo: sin bloqueo
@@ -894,14 +896,20 @@ class MainWindow(QMainWindow):
         if hasattr(self, "btn_emergency"):
             self.btn_emergency.setEnabled(locked)
             self.btn_emergency.setToolTip(
-                "" if locked else "Solo se puede usar con el bloqueo activo."
+                "" if locked else tr("Only usable while the lock is active.")
             )
 
         self.site_info.setText(
-            f"Extensión conectada a http://127.0.0.1:{data.get('port', 0)}/state · "
-            f"IFEO activo en {len(data.get('ifeo', []))} ejecutables · "
-            f"{data.get('guard', {}).get('scans', 0)} barridos, "
-            f"{data.get('guard', {}).get('kills', 0)} detenciones."
+            tr("Extension connected to")
+            + f" http://127.0.0.1:{data.get('port', 0)}/state · "
+            + tr("IFEO active on {n} executables").format(
+                n=len(data.get("ifeo", [])
+            ))
+            + " · "
+            + tr("{a} scans, {b} stops").format(
+                a=data.get("guard", {}).get("scans", 0),
+                b=data.get("guard", {}).get("kills", 0),
+            )
         )
 
     def _update_endpoint(self, data: dict) -> None:
@@ -914,8 +922,8 @@ class MainWindow(QMainWindow):
     def _copy_endpoint(self) -> None:
         QApplication.clipboard().setText(self.ext_url.text())
         QMessageBox.information(
-            self, "Copiado",
-            "Dirección copiada. Abrí la página de opciones de la extensión y pegala.",
+            self, tr("Copied"),
+            tr("Address copied. Open the extension's options page and paste it."),
         )
 
     def _open_ext_dir(self) -> None:
@@ -924,10 +932,12 @@ class MainWindow(QMainWindow):
 
         root = Path(__file__).resolve().parents[2] / "extension"
         if not root.exists():
-            QMessageBox.warning(self, "No encontrado", f"No existe {root}")
+            QMessageBox.warning(self, tr("Not found"), tr("It does not exist:") + f" {root}")
             return
         os.startfile(str(root))  # noqa: S606
-        QMessageBox.information(self, "Extensiones", f"Carpeta abierta:\n{root}")
+        QMessageBox.information(
+            self, tr("Extensions"), tr("Folder opened:") + f"\n{root}"
+        )
 
     _ERROR_STYLE = ("background:#2a0f10;border:1px solid #e5484d;"
                     "border-radius:0px;padding:8px 24px;")
@@ -970,10 +980,12 @@ class MainWindow(QMainWindow):
         if self._data.get("locked", False):
             QMessageBox.information(
                 self,
-                "Ya está bloqueado",
-                "El bloqueo ya está activo.\n\n"
-                "Completá las Lecturas en TickTick o usá el desbloqueo de "
-                "emergencia si necesitás salir.",
+                tr("Already locked"),
+                tr("The lock is already active.\n\n")
+                + tr(
+                    "Finish the Readings in TickTick, or use the emergency "
+                    "unlock if you need to get out."
+                ),
             )
             return
 
@@ -981,21 +993,25 @@ class MainWindow(QMainWindow):
         if not enforcement:
             QMessageBox.information(
                 self,
-                "Sin enforcement",
-                "El servicio de Windows no está corriendo, así que activar el "
-                "bloqueo solo reinicia el contador de Lecturas. Para bloquear "
-                "de verdad instalá el servicio con install.ps1.",
+                tr("Not enforcing"),
+                tr(
+                    "The Windows service is not running, so turning the lock on "
+                    "only resets the Reading counter. To really block, install "
+                    "the service with install.ps1."
+                ),
             )
 
         blocked = self._data.get("ifeo") or []
         if not blocked:
             answer = QMessageBox.question(
                 self,
-                "Activar el bloqueo",
-                "No hay ningún programa en la lista de bloqueados, así que "
-                "activarlo no va a encerrarte de nada.\n\n"
-                "Igual va a contar tus Lecturas.\n\n"
-                "¿Activarlo igual?",
+                tr("Turn on the lock"),
+                tr(
+                    "There is no program in the blocked list, so this will not "
+                    "lock you out of anything.\n\n"
+                )
+                + tr("It will still count your Readings.\n\n")
+                + tr("Turn it on anyway?"),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -1004,12 +1020,15 @@ class MainWindow(QMainWindow):
         else:
             answer = QMessageBox.question(
                 self,
-                "Activar el bloqueo",
-                f"Se van a bloquear {len(blocked)} programa(s) hasta que "
-                "completes las Lecturas:\n\n"
+                tr("Turn on the lock"),
+                tr("{n} program(s) will be blocked until you finish the "
+                   "Readings:").format(n=len(blocked))
+                + "\n\n"
                 + "\n".join(f"  · {name}" for name in blocked)
-                + "\n\nLa única salida son las Lecturas o el desbloqueo de "
-                "emergencia.\n\n¿Activarlo?",
+                + "\n\n"
+                + tr("The only way out is the Readings or the emergency unlock.")
+                + "\n\n"
+                + tr("Turn it on?"),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -1021,15 +1040,15 @@ class MainWindow(QMainWindow):
             self.refresh(force=True)
             message = result.get("message")
             if message:
-                QMessageBox.information(self, "Listo", message)
+                QMessageBox.information(self, tr("Done"), message)
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "No se pudo activar el bloqueo", str(exc))
+            QMessageBox.warning(self, tr("Could not turn the lock on"), str(exc))
 
     def _emergency(self) -> None:
         try:
             cfg = self.client.call("config_get")["config"]
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "No se pudo leer la configuración", str(exc))
+            QMessageBox.warning(self, tr("Could not read the settings"), str(exc))
             return
         dlg = EmergencyDialog(cfg, self.client, self)
         dlg.exec()
@@ -1063,18 +1082,20 @@ class MainWindow(QMainWindow):
         try:
             res = self.client.call(f"{section}_{field}_add", value=value, force=force)
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "No se pudo agregar", str(exc))
+            QMessageBox.warning(self, tr("Could not add"), str(exc))
             return
 
         if res.get("immutable"):
-            QMessageBox.information(self, "Proceso protegido", res.get("message", ""))
+            QMessageBox.information(
+                self, tr("Protected process"), res.get("message", "")
+            )
             return
 
         if res.get("needs_confirm"):
             answer = QMessageBox.warning(
                 self,
-                "Esto puede romper Windows",
-                res.get("message", "El proceso es crítico."),
+                tr("This can break Windows"),
+                res.get("message", tr("The process is critical.")),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -1094,7 +1115,7 @@ class MainWindow(QMainWindow):
             self.client.call(f"{section}_{field}_del", value=item.text())
             self._fill_rules()
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "No se pudo quitar", str(exc))
+            QMessageBox.warning(self, tr("Could not remove"), str(exc))
 
     def _fill_rules(self) -> None:
         try:
@@ -1127,25 +1148,27 @@ class MainWindow(QMainWindow):
         """
         token = self.token.text().strip()
         if not token:
-            QMessageBox.warning(self, "Falta el token", "Pegá el token de TickTick.")
+            QMessageBox.warning(
+                self, tr("Missing token"), tr("Paste your TickTick token.")
+            )
             return
 
         self.btn_token.setEnabled(False)
-        self.btn_token.setText("Probando…")
+        self.btn_token.setText(tr("Testing…"))
         try:
             res = self.client.call("ticktick_set_token", token=token)
         except Exception as exc:  # noqa: BLE001
             self.btn_token.setEnabled(True)
-            self.btn_token.setText("Probar conexión")
+            self.btn_token.setText(tr("Test connection"))
             self._show_token_error(str(exc))
             return
 
         self.btn_token.setEnabled(True)
-        self.btn_token.setText("Probar conexión")
+        self.btn_token.setText(tr("Test connection"))
 
         # A veces el backend devuelve (ok, error) en vez de lanzar.
         if not res.get("ok", False):
-            detail = res.get("error", "El token fue rechazado.")
+            detail = res.get("error", tr("The token was rejected."))
             self._show_token_error(detail, rejected=True)
             return
 
@@ -1155,38 +1178,55 @@ class MainWindow(QMainWindow):
         extra = ""
         if res.get("enforcement") is False:
             extra = (
-                "\n\nOjo: el servicio no está corriendo, así que el token quedó "
-                "guardado pero no se está bloqueando nada todavía.\n"
-                "Instalalo como administrador: install.ps1"
+                "\n\n"
+                + tr(
+                    "Heads up: the service is not running, so the token was "
+                    "saved but nothing is being blocked yet.\n"
+                )
+                + tr("Install it as administrator:") + " install.ps1"
             )
         QMessageBox.information(
             self,
-            "Conectado",
-            f"Token guardado y cifrado.\nProyectos visibles: {res.get('projects')}\n{names}{extra}",
+            tr("Connected"),
+            tr("Token saved and encrypted.")
+            + "\n"
+            + tr("Visible projects:") + f" {res.get('projects')}\n{names}{extra}",
         )
         self.refresh(force=True)
 
     def _show_token_error(self, detail: str, rejected: bool = False) -> None:
         """El error que mas confunde es 'no hay servicio': no es el token."""
         lowered = (detail or "").lower()
-        looks_like_missing_service = (
-            "servicio" in lowered
-            or "pipe" in lowered
-            or "contactar" in lowered
-            or "conectar" in lowered
+        # OJO: estas palabras tienen que estar en los DOS idiomas. El mensaje
+        # lo arma el servicio, que ya contesta en el idioma del usuario, asi
+        # que buscando solo en español el chequeo dejaba de funcionar apenas
+        # alguien elegía inglés: el error se leia como "token malo" y el
+        # consejo de instalar el servicio no aparecia nunca.
+        looks_like_missing_service = any(
+            word in lowered
+            for word in (
+                "servicio", "service",
+                "pipe",
+                "contactar", "contact",
+                "conectar", "connect",
+            )
         )
         if not rejected and looks_like_missing_service:
             QMessageBox.warning(
                 self,
-                "No hay servicio corriendo",
-                "El token no se pudo guardar porque el servicio de Windows no "
-                "está corriendo.\n\n"
-                "Instalalo como administrador:\n"
-                "    powershell -ExecutionPolicy Bypass -File install.ps1\n\n"
-                f"Detalle técnico: {detail}",
+                tr("No service running"),
+                tr(
+                    "The token could not be saved because the Windows service "
+                    "is not running.\n\n"
+                )
+                + tr("Install it as administrator:")
+                + "\n    powershell -ExecutionPolicy Bypass -File install.ps1\n\n"
+                + tr("Technical detail:") + f" {detail}",
             )
             return
-        QMessageBox.warning(self, "Token rechazado", detail or "Revisá el token.")
+        QMessageBox.warning(
+            self, tr("Token rejected"), detail or tr("Check the token.")
+        )
 
     def _save_ticktick_settings(self) -> None:
         """Guarda proyecto/prefijo/cantidad sin depender del servicio."""
@@ -1236,12 +1276,15 @@ class MainWindow(QMainWindow):
             for e in reversed(em):
                 when = datetime.fromtimestamp(e.get("at", 0)).strftime("%Y-%m-%d %H:%M")
                 lines.append(
-                    f"── {when} · {e.get('words', 0)} palabras · "
-                    f"{int(e.get('seconds', 0) // 60)} min\n{e.get('commitment', '')}\n"
+                    f"── {when} · "
+                    + tr("{w} words · {m} min").format(
+                        w=e.get("words", 0), m=int(e.get("seconds", 0) // 60)
+                    )
+                    + f"\n{e.get('commitment', '')}\n"
                 )
             self.hist_em.setPlainText("\n".join(lines))
         else:
-            self.hist_em.setPlainText("Sin desbloqueos de emergencia registrados.")
+            self.hist_em.setPlainText(tr("No emergency unlocks recorded."))
 
         blocks = data.get("blocks", [])
         if blocks:
@@ -1252,7 +1295,7 @@ class MainWindow(QMainWindow):
             ]
             self.hist_blocks.setPlainText("\n".join(rows))
         else:
-            self.hist_blocks.setPlainText("Ningún proceso detenido.")
+            self.hist_blocks.setPlainText(tr("No process was stopped."))
 
     # ------------------------------------------------------------------ cierre
     def closeEvent(self, event) -> None:  # noqa: N802

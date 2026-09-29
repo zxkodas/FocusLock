@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TickFence — configuración</title>
+  <title>TickFence — configuration</title>
   <style>
     :root { color-scheme: dark; }
     body {
@@ -36,38 +36,53 @@
   </style>
 </head>
 <body>
+  <!--
+    Idioma: el del sistema (navigator.language), no el de TickFence.
+
+    Razon: la extension no lee la config de la app. Tendria que pedir el
+    idioma por el endpoint /state, lo que agrega una superficie que puede
+    desincronizarse. Y para el 95% de los casos el idioma del sistema ES el
+    idioma del usuario. Lo que no coincide es un detalle menor, mientras que
+    un endpoint mas del que depende el popup es una falla real.
+
+    Cada texto lleva data-t-en y data-t-es. El HTML esta en ingles, que es el
+    default, y el script de abajo aplica el idioma antes de pintar.
+  -->
   <h1>TickFence</h1>
-  <p class="sub">Conexión con el servicio de Windows.</p>
+  <p class="sub" data-t-en="Connection to the Windows service."
+          data-t-es="Conexión con el servicio de Windows.">Connection to the Windows service.</p>
 
   <fieldset>
-    <legend>Paso 1 — Pegá la dirección que muestra TickFence</legend>
-    <p class="muted">
-      En TickFence, pestaña <strong>Ajustes</strong> → <strong>Extensión del navegador</strong> →
-      <strong>Copiar dirección</strong>. Tiene la forma
-      <code>http://127.0.0.1:PORT/state?token=...</code>
-    </p>
+    <legend data-t-en="Step 1 — Paste the address TickFence shows"
+            data-t-es="Paso 1 — Pegá la dirección que muestra TickFence">Step 1 — Paste the address TickFence shows</legend>
+    <p class="muted" data-t-en="In TickFence, tab Settings → Browser extension → Copy address. It looks like"
+            data-t-es="En TickFence, pestaña Ajustes → Extensión del navegador → Copiar dirección. Tiene la forma">In TickFence, tab Settings → Browser extension → Copy address. It looks like</p>
     <input type="text" id="endpoint" placeholder="http://127.0.0.1:41234/state?token=..." />
     <div>
-      <button id="save">Guardar y conectar</button>
-      <button id="test" class="ghost">Probar</button>
+      <button id="save" data-t-en="Save and connect" data-t-es="Guardar y conectar">Save and connect</button>
+      <button id="test" class="ghost" data-t-en="Test" data-t-es="Probar">Test</button>
     </div>
   </fieldset>
 
   <fieldset>
-    <legend>Estado</legend>
-    <div id="state" class="state offline">Sin configurar</div>
+    <legend data-t-en="State" data-t-es="Estado">State</legend>
+    <div id="state" class="state offline" data-t-en="Not configured" data-t-es="Sin configurar">Not configured</div>
     <div id="detail" class="muted"></div>
   </fieldset>
 
   <fieldset>
-    <legend>Instalación</legend>
+    <legend data-t-en="Installation" data-t-es="Instalación">Installation</legend>
     <ol class="muted">
-      <li>En Chrome: <code>chrome://extensions</code> → activá <strong>Modo de desarrollador</strong>.</li>
-      <li><strong>Cargar descomprimida</strong> → elegí la carpeta <code>extension/chrome</code>.</li>
-      <li>Volvé acá, pegá la dirección y guardá.</li>
+      <li data-t-en="In Chrome: chrome://extensions → turn on Developer mode."
+          data-t-es="En Chrome: chrome://extensions → activá Modo de desarrollador.">In Chrome: <code>chrome://extensions</code> → turn on <strong>Developer mode</strong>.</li>
+      <li data-t-en="Load unpacked → pick the extension/chrome folder."
+          data-t-es="Cargar descomprimida → elegí la carpeta extension/chrome.">Load unpacked → pick the <code>extension/chrome</code> folder.</li>
+      <li data-t-en="Come back here, paste the address and save."
+          data-t-es="Volvé acá, pegá la dirección y guardá.">Come back here, paste the address and save.</li>
     </ol>
   </fieldset>
 
+  <script src="i18n.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import time
 from dataclasses import dataclass, field
 
 from .config import Config
+from .i18n import tr
 from .rules import norm_key, title_matches_prefix
 from .store import Store
 from .ticktick import TickTickClient, TickTickError
@@ -47,8 +48,10 @@ class GateStatus:
 
     def progress_text(self) -> str:
         if self.unlocked:
-            return "Desbloqueado"
-        return f"{self.credits}/{self.required} Lecturas completadas"
+            return tr("Unlocked")
+        return tr("{a}/{b} Readings completed").format(
+            a=self.credits, b=self.required
+        )
 
 
 def _is_completed(task: dict) -> bool:
@@ -216,11 +219,11 @@ class Gate:
             # No se encontro por nombre: avisamos en vez de adivinar.
             available = ", ".join(
                 f"{p.get('name')} ({p.get('id')})" for p in projects
-            ) or "ninguno"
+            ) or tr("none")
             raise TickTickError(
-                f"No se encontró el proyecto '{name}' en tu TickTick. "
-                f"Proyectos disponibles: {available}. "
-                "Corregí el nombre en TickFence → Ajustes."
+                tr("The project '{n}' was not found in your TickTick. ").format(n=name)
+                + tr("Available projects:") + f" {available}. "
+                + tr("Fix the name in TickFence → Settings.")
             )
 
         if explicit:
@@ -228,11 +231,11 @@ class Gate:
                 if project.get("id") == explicit:
                     return explicit
             raise TickTickError(
-                f"El proyecto {explicit} ya no existe en TickTick. "
-                "Indicá un nombre en TickFence → Ajustes."
+                tr("The project {p} no longer exists in TickTick. ").format(p=explicit)
+                + tr("Set a name in TickFence → Settings.")
             )
 
-        raise TickTickError("No configuraste ningún proyecto de TickTick.")
+        raise TickTickError(tr("You did not set a TickTick project."))
 
     def poll(self) -> GateStatus:
         """Consulta TickTick, actualiza créditos y devuelve el estado."""
@@ -243,8 +246,8 @@ class Gate:
             self._status.unlock_reason = self.reason()
 
             if not self._client.configured:
-                self._status.error = (
-                    "Sin token de TickTick. Abrí TickFence → Ajustes y pegalo."
+                self._status.error = tr(
+                    "No TickTick token. Open TickFence → Settings and paste it."
                 )
                 return self._status
 
@@ -277,8 +280,9 @@ class Gate:
             # consulta de un ciclo: sin linea base previa, un vacio puede ser
             # cualquier cosa y no hay nada que acreditar todavia.
             if not data.get("tasks") and not (previous and started > 0):
-                self._status.error = (
-                    "TickTick devolvió el proyecto sin tareas. No se tomó como base."
+                self._status.error = tr(
+                    "TickTick returned the project with no tasks. It was not "
+                    "taken as the baseline."
                 )
                 self._store.set("last_error", self._status.error)
                 return self._status

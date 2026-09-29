@@ -20,7 +20,7 @@ EXT = ROOT / "extension"
 BROWSERS = ("chrome", "firefox")
 
 REQUIRED_FILES = ("manifest.json", "sw.js", "options.html", "options.js",
-                  "popup.html", "popup.js")
+                  "popup.html", "popup.js", "i18n.js")
 
 
 def _balance(path: Path) -> tuple[bool, dict[str, int]]:
@@ -259,6 +259,84 @@ class TestExtensionFiles(unittest.TestCase):
             (EXT / "chrome" / "manifest.json").read_text(encoding="utf-8")
         )
         self.assertIn("service_worker", manifest["background"])
+
+
+class TestExtensionLanguage(unittest.TestCase):
+    """La extension se traduce sola, por el idioma del sistema.
+
+    No lee la config de TickFence a proposito: seria un endpoint mas del que
+    depende el popup, y para el 95% de los casos el idioma del sistema ya es
+    el del usuario. Estos tests evitan que se rompa el mecanismo.
+    """
+
+    def test_el_html_arranca_en_ingles(self):
+        """El HTML por defecto es ingles, que es el default de TickFence.
+
+        Si arrancara en espanol, un usuario con el sistema en ingles veria la
+        pagina de opciones en espanol hasta que corra el script.
+        """
+        for browser in BROWSERS:
+            for page in ("popup.html", "options.html"):
+                with self.subTest(browser=browser, page=page):
+                    html = (EXT / browser / page).read_text(encoding="utf-8")
+                    self.assertIn('lang="en"', html)
+
+    def test_todo_texto_traducible_tiene_los_dos_idiomas(self):
+        """Cada data-t-en tiene su data-t-es al lado.
+
+        Un data-t-en sin su par significa que el usuario en espanol ve el texto
+        en ingles, sin ningun aviso.
+        """
+        for browser in BROWSERS:
+            for page in ("popup.html", "options.html"):
+                with self.subTest(browser=browser, page=page):
+                    html = (EXT / browser / page).read_text(encoding="utf-8")
+                    en = re.findall(r'data-t-en="([^"]*)"', html)
+                    es = re.findall(r'data-t-es="([^"]*)"', html)
+                    self.assertTrue(en, f"{page} no tiene textos traducibles")
+                    self.assertEqual(
+                        len(en), len(es),
+                        f"{page}: {len(en)} textos en ingles y {len(es)} en espanol")
+
+    def test_las_paginas_cargan_i18n_antes_de_su_propio_script(self):
+        """El orden importa: si el script propio corre primero, escribe en ingles."""
+        for browser in BROWSERS:
+            for page in ("popup.html", "options.html"):
+                with self.subTest(browser=browser, page=page):
+                    html = (EXT / browser / page).read_text(encoding="utf-8")
+                    propio = page.replace(".html", ".js")
+                    self.assertLess(
+                        html.index('src="i18n.js"'),
+                        html.index('src="%s"' % propio),
+                        f"{browser}/{page} carga {propio} antes de i18n.js",
+                    )
+
+    def test_i18n_js_esta_en_los_dos_navegadores(self):
+        for browser in BROWSERS:
+            with self.subTest(browser=browser):
+                self.assertTrue((EXT / browser / "i18n.js").is_file())
+
+    def test_todo_script_del_html_esta_en_el_paquete(self):
+        """Si el HTML carga un script, el .xpi tiene que traerlo.
+
+        build_xpi.py tiene una lista fija de CONTENTS. Un script nuevo que se
+        agregue al HTML y se olvide en esa lista produce un .xpi que empaqueta
+        bien, pasa la verificacion de integridad, y falla recien en el
+        navegador con un 404 silencioso.
+        """
+        from focuslock import build_xpi
+
+        for browser in BROWSERS:
+            for page in ("popup.html", "options.html"):
+                with self.subTest(browser=browser, page=page):
+                    html = (EXT / browser / page).read_text(encoding="utf-8")
+                    cargados = re.findall(r'<script src="([^"]+)"', html)
+                    self.assertTrue(cargados, f"{page} no carga scripts")
+                    for archivo in cargados:
+                        self.assertIn(
+                            archivo, build_xpi.CONTENTS,
+                            f"{browser}/{page} carga {archivo} pero build_xpi "
+                            f"no lo mete en el paquete")
 
 
 if __name__ == "__main__":

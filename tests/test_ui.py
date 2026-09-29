@@ -313,8 +313,8 @@ class TestMainWindow(QtTestCase):
         self.client.locked = False
         self.window.refresh(force=True)
         # Desbloqueado se lee en la barra y en el subtitulo, no en el banner.
-        self.assertIn("Desbloqueado", self.window.count.text())
-        self.assertIn("No hay bloqueo", self.window.estado_sub.text())
+        self.assertIn("Unlocked", self.window.count.text())
+        self.assertIn("No lock is active", self.window.estado_sub.text())
 
     def test_progress_reflects_credits(self):
         self.client.locked = True
@@ -332,7 +332,7 @@ class TestMainWindow(QtTestCase):
         """El numero solo no dice si falta mucho o poco."""
         self.client.locked = True
         self.window.refresh()
-        self.assertIn("falta", self.window.estado_sub.text().lower())
+        self.assertIn("left to unlock", self.window.estado_sub.text().lower())
 
     def test_the_shortcuts_exist(self):
         """Ctrl+L y Ctrl+E, como dice la tarjeta de atajos."""
@@ -346,7 +346,7 @@ class TestMainWindow(QtTestCase):
         """Abrir la app no debe activar el bloqueo."""
         self.client.locked = False
         self.window.refresh()
-        self.assertEqual(self.window.btn_toggle.text(), "Activar bloqueo")
+        self.assertEqual(self.window.btn_toggle.text(), "Turn on the lock")
         self.assertFalse(self.window.btn_emergency.isEnabled())
 
     def test_offline_does_not_claim_blocked_state(self):
@@ -382,7 +382,7 @@ class TestMainWindow(QtTestCase):
 
     def test_history_loads(self):
         self.window._load_history()
-        self.assertIn("320 palabras", self.window.hist_em.toPlainText())
+        self.assertIn("320 words", self.window.hist_em.toPlainText())
         self.assertIn("steam.exe", self.window.hist_blocks.toPlainText())
 
     def test_save_settings_sends_expected_payload(self):
@@ -496,11 +496,11 @@ class TestMainWindow(QtTestCase):
     def test_button_label_reflects_state(self):
         self.client.locked = False
         self.window.refresh()
-        self.assertEqual(self.window.btn_toggle.text(), "Activar bloqueo")
+        self.assertEqual(self.window.btn_toggle.text(), "Turn on the lock")
         self.assertTrue(self.window.btn_toggle.isEnabled())
         self.client.locked = True
         self.window.refresh()
-        self.assertEqual(self.window.btn_toggle.text(), "Bloqueo activo")
+        self.assertEqual(self.window.btn_toggle.text(), "Lock active")
         self.assertFalse(
             self.window.btn_toggle.isEnabled(),
             "con el bloqueo activo el boton no debe poder usarse",

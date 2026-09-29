@@ -26,6 +26,9 @@ CONTENTS = (
     "options.js",
     "popup.html",
     "popup.js",
+    # i18n.js lo cargan popup.html y options.html con <script src>. Si no
+    # entra acá, el .xpi sale sin el y la extension queda en ingles fijo.
+    "i18n.js",
 )
 
 

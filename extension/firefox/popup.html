@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <style>
@@ -20,9 +20,10 @@
 </head>
 <body>
   <h1><span class="dot x" id="dot"></span><span id="title">TickFence</span></h1>
-  <div class="muted" id="detail">iniciando…</div>
-  <button id="refresh">Actualizar</button>
-  <button id="options">Configuración</button>
+  <div class="muted" id="detail" data-t-en="starting…" data-t-es="iniciando…">starting…</div>
+  <button id="refresh" data-t-en="Refresh" data-t-es="Actualizar">Refresh</button>
+  <button id="options" data-t-en="Settings" data-t-es="Configuración">Settings</button>
+  <script src="i18n.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -2,6 +2,11 @@
 
 const $ = (id) => document.getElementById(id);
 
+// i18n.js corre antes que este archivo y deja TickFenceT en window. El fallback
+// es para que el popup siga funcionando si el script no esta.
+const T = window.TickFenceT || { t: (en) => en };
+const t = T.t;
+
 const VERSION = "1.3";
 
 function setState(kind, title, detail) {
@@ -53,12 +58,16 @@ function paint(state, warn) {
     const count = state.blockedCount ?? (state.blockedHosts || []).length;
     setState(
       "l",
-      "Bloqueado",
-      `${state.credits}/${state.required} tareas · ` +
-        `${count} dominios${warn ? " · " + warn : ""}`
+      t("Locked", "Bloqueado"),
+      `${state.credits}/${state.required} ${t("tasks", "tareas")} · ` +
+        `${count} ${t("domains", "dominios")}${warn ? " · " + warn : ""}`
     );
   } else {
-    setState("o", "Desbloqueado", state.reason || "listo para trabajar");
+    setState(
+      "o",
+      t("Unlocked", "Desbloqueado"),
+      state.reason || t("ready to work", "listo para trabajar")
+    );
   }
 }
 
@@ -77,30 +86,34 @@ async function refresh() {
 
   // Falló la consulta directa: pintar el último estado conocido con el aviso.
   if (store.lastState) {
-    paint(store.lastState, "sin conexion en vivo");
+    paint(store.lastState, t("not live", "sin conexion en vivo"));
   } else {
-    setState("x", "Sin datos", "no se pudo leer el estado");
+    setState("x", t("No data", "Sin datos"), t("could not read the state", "no se pudo leer el estado"));
   }
 
   const err = result.error;
   if (err === "sin configurar") {
-    $("title").textContent = "Sin configurar";
-    $("detail").textContent = "pegá la dirección en Configuración · v" + VERSION;
+    $("title").textContent = t("Not configured", "Sin configurar");
+    $("detail").textContent =
+      t("paste the address in Settings", "pegá la dirección en Configuración") +
+      " · v" + VERSION;
   } else if (err === "token invalido") {
-    $("title").textContent = "Dirección vieja";
-    $("detail").textContent = "pegá de nuevo la dirección · v" + VERSION;
+    $("title").textContent = t("Old address", "Dirección vieja");
+    $("detail").textContent =
+      t("paste the address again", "pegá de nuevo la dirección") + " · v" + VERSION;
   } else if (err === "sin conexion") {
-    $("title").textContent = "Servicio caído";
-    $("detail").textContent = "abrí la app de Windows · v" + VERSION;
+    $("title").textContent = t("Service down", "Servicio caído");
+    $("detail").textContent =
+      t("open the Windows app", "abrí la app de Windows") + " · v" + VERSION;
   }
 }
 
 $("refresh").addEventListener("click", async (ev) => {
   const btn = ev.currentTarget;
   const original = btn.textContent;
-  btn.textContent = "Actualizando...";
+  btn.textContent = t("Refreshing...", "Actualizando...");
   btn.disabled = true;
-  $("title").textContent = "Consultando…";
+  $("title").textContent = t("Asking…", "Consultando…");
   $("detail").textContent = "";
   await refresh();
   btn.textContent = original;

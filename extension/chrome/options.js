@@ -1,28 +1,40 @@
 const $ = (id) => document.getElementById(id);
 
+// i18n.js corre antes que este archivo (ver popup.html / options.html).
+const T = window.TickFenceT || { t: (en) => en };
+const t = T.t;
+
 function render(state) {
   const box = $("state");
   const detail = $("detail");
   if (!state) {
     box.className = "state offline";
-    box.textContent = "Sin conexión con TickFence";
-    detail.textContent =
-      "El servicio de Windows no respondió. Verificá que esté corriendo y que la dirección sea correcta.";
+    box.textContent = t("No connection to TickFence", "Sin conexión con TickFence");
+    detail.textContent = t(
+      "The Windows service did not respond. Check that it is running and that the address is right.",
+      "El servicio de Windows no respondió. Verificá que esté corriendo y que la dirección sea correcta."
+    );
     return;
   }
   if (state.locked) {
     box.className = "state locked";
-    box.textContent = "BLOQUEADO — la extensión está frenando los dominios configurados";
+    box.textContent = t(
+      "LOCKED — the extension is stopping the configured domains",
+      "BLOQUEADO — la extensión está frenando los dominios configurados"
+    );
   } else {
     box.className = "state open";
-    box.textContent = "DESBLOQUEADO — la extensión no está bloqueando nada";
+    box.textContent = t(
+      "UNLOCKED — the extension is blocking nothing",
+      "DESBLOQUEADO — la extensión no está bloqueando nada"
+    );
   }
   const parts = [
-    `Lecturas: ${state.credits} de ${state.required}`,
-    `Dominios bloqueados: ${state.blockedCount}`,
+    `${t("Readings", "Lecturas")}: ${state.credits} ${t("of", "de")} ${state.required}`,
+    `${t("Blocked domains", "Dominios bloqueados")}: ${state.blockedCount}`,
   ];
-  if (state.reason) parts.push(`Motivo: ${state.reason}`);
-  parts.push(`Actualizado: ${new Date(state.updatedAt).toLocaleTimeString()}`);
+  if (state.reason) parts.push(`${t("Reason", "Motivo")}: ${state.reason}`);
+  parts.push(`${t("Updated", "Actualizado")}: ${new Date(state.updatedAt).toLocaleTimeString()}`);
   detail.textContent = parts.join(" · ");
 }
 

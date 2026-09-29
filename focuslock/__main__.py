@@ -5,6 +5,10 @@
     python -m focuslock console     motor en primer plano, para depurar
     python -m focuslock status      consulta el estado al servicio
     python -m focuslock uninstall   desinstala todo
+
+El idioma sale de la config, igual que en la ventana. Ojo: leer la config
+puede fallar si el servicio todavia no esta instalado (es justamente lo que
+hace 'install'), asi que _set_lang_from_config nunca lanza.
 """
 from __future__ import annotations
 
@@ -13,17 +17,29 @@ import os
 import sys
 import time
 
+from .i18n import set_lang, tr
 from .paths import is_elevated, is_windows
 from .rules import norm_program
 
 
+def _set_lang_from_config() -> None:
+    """Idioma del CLI. Si la config no esta, se queda en ingles."""
+    try:
+        from . import config as config_mod
+
+        cfg = config_mod.instance()
+        set_lang(cfg.get("general").get("language", "en"))
+    except Exception:  # noqa: BLE001
+        set_lang("en")
+
+
 def _need_admin(action: str) -> None:
     if not is_windows():
-        print("TickFence solo funciona en Windows.")
+        print(tr("TickFence only runs on Windows."))
         sys.exit(2)
     if not is_elevated():
-        print(f"'{action}' necesita permisos de administrador.", file=sys.stderr)
-        print("Cerrá esto y volvé a abrirlo como administrador.", file=sys.stderr)
+        print(tr("'{a}' needs administrator rights.").format(a=action), file=sys.stderr)
+        print(tr("Close this and reopen it as administrator."), file=sys.stderr)
         sys.exit(3)
 
 
@@ -48,8 +64,8 @@ def cmd_install(args) -> int:
     from .paths import APP_VERSION
     from .service import install as install_service
 
-    print(f"TickFence {APP_VERSION} — instalación")
-    print(f"  datos en: {paths.program_data()}")
+    print(f"TickFence {APP_VERSION} — {tr('install')}")
+    print(f"  {tr('data in')}: {paths.program_data()}")
 
     paths.program_data().mkdir(parents=True, exist_ok=True)
     cfg = config_mod.instance()
@@ -57,27 +73,28 @@ def cmd_install(args) -> int:
     print(f"  config   : {cfg.path}")
 
     if getattr(sys, "frozen", False):
-        print("  modo     : ejecutable empaquetado")
+        print(f"  {tr('mode'):<8} : {tr('bundled executable')}")
     else:
-        print(f"  modo     : código fuente ({sys.executable})")
+        print(f"  {tr('mode'):<8} : {tr('source code')} ({sys.executable})")
 
-    print("  instalando el paquete para el servicio…")
+    print(f"  {tr('installing the package for the service')}…")
     from .install_pkg import install as install_pkg
 
     if install_pkg() != 0:
-        print("  ERROR: el servicio no podría encontrar el paquete.", file=sys.stderr)
-        return 1
-
-    print("  registrando el servicio…")
-    install_service()
-    print("  arrancando servicio…")
-
-    if not _wait_for_service():
-        print("  ERROR: el servicio no respondió.", file=sys.stderr)
-        print("  Revisá el visor de eventos o probá: python -m focuslock console",
+        print(f"  ERROR: {tr('the service could not find the package')}.",
               file=sys.stderr)
         return 1
-    print("  servicio listo.")
+
+    print(f"  {tr('registering the service')}…")
+    install_service()
+    print(f"  {tr('starting the service')}…")
+
+    if not _wait_for_service():
+        print(f"  ERROR: {tr('the service did not respond')}.", file=sys.stderr)
+        print(f"  {tr('Check the event viewer or try:')} "
+              f"python -m focuslock console", file=sys.stderr)
+        return 1
+    print(f"  {tr('service ready')}.")
 
     from .ipc import IpcClient
 
@@ -86,7 +103,8 @@ def cmd_install(args) -> int:
         try:
             res = client.call("ticktick_set_token", token=args.token)
             if res.get("ok"):
-                print(f"  token    : guardado y cifrado ({res.get('projects')} proyectos)")
+                print(f"  token    : {tr('saved and encrypted')} "
+                      f"({res.get('projects')} {tr('projects')})")
             else:
                 print(f"  token    : ERROR {res.get('error')}", file=sys.stderr)
         except Exception as exc:
@@ -95,23 +113,23 @@ def cmd_install(args) -> int:
     from .daemon import stub_command
     print(f"  IFEO stub: {stub_command()}")
     blocked = ifeo.list_blocked()
-    print(f"  IFEO     : {len(blocked)} ejecutables bloqueados a nivel Windows")
+    print(f"  IFEO     : {len(blocked)} {tr('executables blocked at the Windows level')}")
     if not blocked:
-        print("  (ninguno: con la maquina desbloqueada el IFEO esta limpio)")
+        print(f"  ({tr('none: with the machine unlocked the IFEO is clean')})")
 
     # Acceso desde Inicio/Escritorio e autoinicio: sin esto el ícono del área
     # de notificación no existe después de reiniciar y no hay forma de abrir
     # la app para desbloquear.
-    print("  creando accesos directos…")
+    print(f"  {tr('creating shortcuts')}…")
     try:
         from .shortcuts import install as install_shortcuts
 
         result = install_shortcuts()
         for path in result.get("shortcuts", []):
-            print(f"    acceso: {path}")
+            print(f"    {tr('shortcut')}: {path}")
     except Exception as exc:  # noqa: BLE001
-        print(f"  AVISO: no se pudieron crear los accesos directos: {exc}")
-        print("  La app se abre igual con: python -m focuslock gui")
+        print(f"  {tr('WARNING')}: {tr('the shortcuts could not be created')}: {exc}")
+        print(f"  {tr('The app still opens with:')} python -m focuslock gui")
     return 0
 
 
@@ -120,13 +138,13 @@ def cmd_uninstall(args) -> int:
     from . import ifeo
     from .service import uninstall as uninstall_service
 
-    print("Quitando bloqueos IFEO…")
+    print(f"{tr('Removing IFEO blocks')}…")
     for exe in ifeo.list_blocked():
         ifeo.clear(exe)
-        print(f"  liberado: {exe}")
-    print("Deteniendo y eliminando el servicio…")
+        print(f"  {tr('cleared')}: {exe}")
+    print(f"{tr('Stopping and removing the service')}…")
     uninstall_service()
-    print("Listo. Podés borrar C:\\ProgramData\\TickFence si querés.")
+    print(f"{tr('Done. You can delete C:\\ProgramData\\TickFence if you want to.')}")
     return 0
 
 
@@ -176,25 +194,27 @@ def cmd_doctor(args) -> int:
         print(f"El servicio NO responde: {exc}")
         return 1
 
-    print("Servicio respondsiendo.")
+    print(f"{tr('Service responding')}.")
     print(f"  pid           {info.get('service_pid')}")
     print(f"  python        {info.get('python')}")
     print(f"  config        {info.get('config_path')}")
-    print(f"  estado        {info.get('state_path')}")
-    print(f"  servidor HTTP puerto {info.get('port')}")
-    print(f"  IFEO aplicado {len(info.get('ifeo_applied') or [])} ejecutables")
-    print(f"  guardia       {info.get('guard')}")
-    print(f"  stub IFEO     {info.get('stub')}")
-    print(f"  ticktick      {'configurado' if info.get('ticktick_ok') else 'SIN TOKEN'}")
+    print(f"  {tr('state'):<14} {info.get('state_path')}")
+    print(f"  {tr('HTTP port')} {info.get('port')}")
+    print(f"  IFEO {tr('applied')} {len(info.get('ifeo_applied') or [])} "
+          f"{tr('executables')}")
+    print(f"  {tr('guard'):<14} {info.get('guard')}")
+    print(f"  {tr('IFEO stub'):<14} {info.get('stub')}")
+    print(f"  ticktick      {tr('configured') if info.get('ticktick_ok') else tr('NO TOKEN')}")
     try:
         st = client.call("status")
     except Exception as exc:  # noqa: BLE001
-        print(f"  status falló: {exc}")
+        print(f"  {tr('status failed')}: {exc}")
         return 1
-    print(f"  estado actual {'BLOQUEADO' if st.get('locked') else 'DESBLOQUEADO'} "
+    print(f"  {tr('current state')} "
+          f"{tr('LOCKED') if st.get('locked') else tr('UNLOCKED')} "
           f"{st.get('credits')}/{st.get('required')}")
     if st.get("error"):
-        print(f"  error: {st['error']}")
+        print(f"  {tr('error')}: {st['error']}")
     return 0
 
 
@@ -248,16 +268,17 @@ def cmd_status(args) -> int:
     try:
         data = IpcClient().call("status")
     except Exception as exc:  # noqa: BLE001
-        print(f"Sin servicio: {_safe(exc)}")
+        print(f"{tr('No service')}: {_safe(exc)}")
         return 1
-    estado = "BLOQUEADO" if data.get("locked") else "DESBLOQUEADO"
-    print(f"{estado}  ·  {data.get('credits')}/{data.get('required')} Lecturas")
-    print(f"  razón      : {_safe(data.get('reason') or '-')}")
-    print(f"  pendientes : {sum((data.get('modules') or {}).values())}")
-    print(f"  IFEO       : {len(data.get('ifeo', []))} ejecutables")
-    print(f"  servidor   : http://127.0.0.1:{data.get('port')}/state")
+    estado = tr("LOCKED") if data.get("locked") else tr("UNLOCKED")
+    print(f"{estado}  ·  {data.get('credits')}/{data.get('required')} "
+          f"{tr('Readings')}")
+    print(f"  {tr('reason'):<12} : {_safe(data.get('reason') or '-')}")
+    print(f"  {tr('pending'):<12} : {sum((data.get('modules') or {}).values())}")
+    print(f"  IFEO         : {len(data.get('ifeo', []))} {tr('executables')}")
+    print(f"  {tr('server'):<12} : http://127.0.0.1:{data.get('port')}/state")
     if data.get("error"):
-        print(f"  error      : {_safe(data['error'])}")
+        print(f"  {tr('error'):<12} : {_safe(data['error'])}")
     return 0
 
 
@@ -313,6 +334,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):
         args = parser.parse_args(["gui"] if argv is None else argv)
+    # Antes de correr el comando: el idioma sale de la config y los textos ya
+    # estan armados con tr() para cuando se arme la ventana.
+    _set_lang_from_config()
     return args.func(args)
 
 

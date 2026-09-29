@@ -177,6 +177,189 @@ ES: dict[str, str] = {
     "Copy address": "Copiar dirección",
     "Open extension folder": "Abrir carpeta de la extensión",
     "Save settings": "Guardar ajustes",
+    # -- Bitácora -----------------------------------------------------------
+    "Emergency unlocks": "Desbloqueos de emergencia",
+    "Blocked process attempts": "Intentos de bloqueo de procesos",
+    "Refresh log": "Actualizar bitácora",
+    "{w} words · {m} min": "{w} palabras · {m} min",
+    "No emergency unlocks recorded.": "Sin desbloqueos de emergencia registrados.",
+    "No process was stopped.": "Ningún proceso detenido.",
+    # -- render del estado --------------------------------------------------
+    "{a} of {b} tasks": "{a} de {b} tareas",
+    "{n} task left to unlock.": "Te falta {n} tarea para desbloquear.",
+    "{n} tasks left to unlock.": "Te faltan {n} tareas para desbloquear.",
+    "Unlocked": "Desbloqueado",
+    "No lock is active. Use whatever you want.": (
+        "No hay bloqueo activo. Podés usar lo que quieras."
+    ),
+    "Asking TickTick…": "Consultando TickTick…",
+    "Pending by module: ": "Pendientes por módulo: ",
+    "No Readings pending in TickTick.": "No hay Lecturas pendientes en TickTick.",
+    "<b style='color:#e5484d'>Error asking TickTick</b><br>": (
+        "<b style='color:#e5484d'>ERROR al consultar TickTick</b><br>"
+    ),
+    "The Reading count is not being updated.": (
+        "El contador de Lecturas no se está actualizando."
+    ),
+    "Lock active": "Bloqueo activo",
+    "Only usable while the lock is active.": (
+        "Solo se puede usar con el bloqueo activo."
+    ),
+    "Extension connected to": "Extensión conectada a",
+    "IFEO active on {n} executables": "IFEO activo en {n} ejecutables",
+    "{a} scans, {b} stops": "{a} barridos, {b} detenciones",
+    "Copied": "Copiado",
+    "Address copied. Open the extension's options page and paste it.": (
+        "Dirección copiada. Abrí la página de opciones de la extensión y pegala."
+    ),
+    "Not found": "No encontrado",
+    "It does not exist:": "No existe:",
+    "Extensions": "Extensiones",
+    "Folder opened:": "Carpeta abierta:",
+    # -- diálogos -----------------------------------------------------------
+    "Already locked": "Ya está bloqueado",
+    "The lock is already active.\n\n": "El bloqueo ya está activo.\n\n",
+    "Finish the Readings in TickTick, or use the emergency unlock if you need to get out.": (
+        "Completá las Lecturas en TickTick o usá el desbloqueo de emergencia "
+        "si necesitás salir."
+    ),
+    "Not enforcing": "Sin enforcement",
+    (
+        "The Windows service is not running, so turning the lock on only resets "
+        "the Reading counter. To really block, install the service with install.ps1."
+    ): (
+        "El servicio de Windows no está corriendo, así que activar el bloqueo "
+        "solo reinicia el contador de Lecturas. Para bloquear de verdad "
+        "instalá el servicio con install.ps1."
+    ),
+    (
+        "There is no program in the blocked list, so this will not lock you out "
+        "of anything.\n\n"
+    ): (
+        "No hay ningún programa en la lista de bloqueados, así que activarlo "
+        "no va a encerrarte de nada.\n\n"
+    ),
+    "It will still count your Readings.\n\n": "Igual va a contar tus Lecturas.\n\n",
+    "Turn it on anyway?": "¿Activarlo igual?",
+    "{n} program(s) will be blocked until you finish the Readings:": (
+        "Se van a bloquear {n} programa(s) hasta que completes las Lecturas:"
+    ),
+    "The only way out is the Readings or the emergency unlock.": (
+        "La única salida son las Lecturas o el desbloqueo de emergencia."
+    ),
+    "Turn it on?": "¿Activarlo?",
+    "Done": "Listo",
+    "Could not turn the lock on": "No se pudo activar el bloqueo",
+    "Could not read the settings": "No se pudo leer la configuración",
+    "Could not add": "No se pudo agregar",
+    "Protected process": "Proceso protegido",
+    "This can break Windows": "Esto puede romper Windows",
+    "The process is critical.": "El proceso es crítico.",
+    "Could not remove": "No se pudo quitar",
+    # -- token --------------------------------------------------------------
+    "Missing token": "Falta el token",
+    "Paste your TickTick token.": "Pegá el token de TickTick.",
+    "Test connection": "Probar conexión",
+    "Testing…": "Probando…",
+    "The token was rejected.": "El token fue rechazado.",
+    "Connected": "Conectado",
+    "Token saved and encrypted.": "Token guardado y cifrado.",
+    "Visible projects:": "Proyectos visibles:",
+    (
+        "Heads up: the service is not running, so the token was saved but "
+        "nothing is being blocked yet.\n"
+    ): (
+        "Ojo: el servicio no está corriendo, así que el token quedó guardado "
+        "pero no se está bloqueando nada todavía.\n"
+    ),
+    "Install it as administrator:": "Instalalo como administrador:",
+    "No service running": "No hay servicio corriendo",
+    (
+        "The token could not be saved because the Windows service is not "
+        "running.\n\n"
+    ): (
+        "El token no se pudo guardar porque el servicio de Windows no está "
+        "corriendo.\n\n"
+    ),
+    "Technical detail:": "Detalle técnico:",
+    "Token rejected": "Token rechazado",
+    "Check the token.": "Revisá el token.",
+    # -- línea de comandos --------------------------------------------------
+    "TickFence only runs on Windows.": "TickFence solo funciona en Windows.",
+    "'{a}' needs administrator rights.": "'{a}' necesita permisos de administrador.",
+    "Close this and reopen it as administrator.": (
+        "Cerrá esto y volvé a abrirlo como administrador."
+    ),
+    "install": "instalación",
+    # OJO: "uninstall" NO va acá. Es el nombre del subcomando y el texto que
+    # _need_admin imprime ('uninstall' necesita permisos de administrador).
+    # Traducirlo haría que el consejo diga un comando que no existe.
+    "data in": "datos en",
+    "mode": "modo",
+    "bundled executable": "ejecutable empaquetado",
+    "source code": "código fuente",
+    "installing the package for the service": "instalando el paquete para el servicio",
+    "the service could not find the package": "el servicio no podría encontrar el paquete",
+    "registering the service": "registrando el servicio",
+    "starting the service": "arrancando servicio",
+    "the service did not respond": "el servicio no respondió",
+    "Check the event viewer or try:": "Revisá el visor de eventos o probá:",
+    "service ready": "servicio listo",
+    "saved and encrypted": "guardado y cifrado",
+    "projects": "proyectos",
+    "executables blocked at the Windows level": "ejecutables bloqueados a nivel Windows",
+    "none: with the machine unlocked the IFEO is clean": (
+        "ninguno: con la maquina desbloqueada el IFEO esta limpio"
+    ),
+    "creating shortcuts": "creando accesos directos",
+    "shortcut": "acceso",
+    "WARNING": "AVISO",
+    "the shortcuts could not be created": "no se pudieron crear los accesos directos",
+    "The app still opens with:": "La app se abre igual con:",
+    "Removing IFEO blocks": "Quitando bloqueos IFEO",
+    "cleared": "liberado",
+    "Stopping and removing the service": "Deteniendo y eliminando el servicio",
+    "Done. You can delete C:\\ProgramData\\TickFence if you want to.": (
+        "Listo. Podés borrar C:\\ProgramData\\TickFence si querés."
+    ),
+    "Service responding": "Servicio respondsiendo",
+    "state": "estado",
+    "HTTP port": "servidor HTTP puerto",
+    "applied": "aplicado",
+    "executables": "ejecutables",
+    "guard": "guardia",
+    "IFEO stub": "stub IFEO",
+    "configured": "configurado",
+    "NO TOKEN": "SIN TOKEN",
+    "status failed": "status falló",
+    "current state": "estado actual",
+    "LOCKED": "BLOQUEADO",
+    "UNLOCKED": "DESBLOQUEADO",
+    "error": "error",
+    # -- estado que arma el servicio ----------------------------------------
+    "{a}/{b} Readings completed": "{a}/{b} Lecturas completadas",
+    "none": "ninguno",
+    "The project '{n}' was not found in your TickTick. ": (
+        "No se encontró el proyecto '{n}' en tu TickTick. "
+    ),
+    "Available projects:": "Proyectos disponibles:",
+    "Fix the name in TickFence → Settings.": "Corregí el nombre en TickFence → Ajustes.",
+    "The project {p} no longer exists in TickTick. ": (
+        "El proyecto {p} ya no existe en TickTick. "
+    ),
+    "Set a name in TickFence → Settings.": "Indicá un nombre en TickFence → Ajustes.",
+    "You did not set a TickTick project.": "No configuraste ningún proyecto de TickTick.",
+    "No TickTick token. Open TickFence → Settings and paste it.": (
+        "Sin token de TickTick. Abrí TickFence → Ajustes y pegalo."
+    ),
+    "TickTick returned the project with no tasks. It was not taken as the baseline.": (
+        "TickTick devolvió el proyecto sin tareas. No se tomó como base."
+    ),
+    "No service": "Sin servicio",
+    "Readings": "Lecturas",
+    "reason": "razón",
+    "pending": "pendientes",
+    "server": "servidor",
 }
 
 
