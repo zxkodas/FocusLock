@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# El repo es de Windows: el bloqueo depende de pythonservice.exe, de HKLM y de
+# IFEO. En Linux o macOS las suites pasan o no pasan por razones que no dicen
+# nada sobre el producto, asi que no tiene sentido correrlas ahi.
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 es el piso que declara pyproject.toml y hay que probarlo de
+        # verdad: un "requires-python" que nunca se ejecuto es una suposicion.
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # -Quick deja afuera test_guard, y es a proposito: copia pythonw.exe con
+      # otros nombres y deja que un ProcessGuard real los mate. En un runner
+      # compartido eso no se hace. Si alguna vez se corre, que sea en una
+      # maquina desechable, no en un runner de Actions.
+      - name: Correr las pruebas
+        shell: pwsh
+        run: .\run_tests.ps1 -Quick
+
+      # Arma el .xpi y el .zip. Es barato y avisa temprano si el manifest o el
+      # orden de escritura se rompen, que es como falla build_xpi.
+      - name: Empaquetar la extension
+        run: python -m focuslock.build_xpi
