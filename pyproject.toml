@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "focuslock"
+version = "1.0.0"
+description = "Bloqueador de foco para Windows con TickTick como llave"
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.10",
+    "psutil>=6.0",
+    "pywin32>=306",
+]
+
+[project.scripts]
+focuslock = "focuslock.__main__:main"
+
+[tool.setuptools]
+packages = ["focuslock", "focuslock.ui"]

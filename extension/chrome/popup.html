@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      font: 13px/1.5 system-ui, sans-serif; width: 300px;
+      background: #15171c; color: #e6e8ee; padding: 16px; margin: 0;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+    .l { background: #e5484d; } .o { background: #30a46c; } .x { background: #d9a406; }
+    h1 { font-size: 15px; margin: 0 0 8px; }
+    .muted { color: #8f98ad; }
+    button {
+      width: 100%; margin-top: 10px; background: #242832; color: #e6e8ee;
+      border: 0; border-radius: 6px; padding: 8px; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: default; }
+  </style>
+</head>
+<body>
+  <h1><span class="dot x" id="dot"></span><span id="title">FocusLock</span></h1>
+  <div class="muted" id="detail">iniciando…</div>
+  <button id="refresh">Actualizar</button>
+  <button id="options">Configuración</button>
+  <script src="popup.js"></script>
+</body>
+</html>

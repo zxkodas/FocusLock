@@ -1,0 +1,23 @@
+# Paquetes compilados
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.py[cod]
+
+# Secretos. Nunca deben entrar al repo.
+# La config y el estado reales viven en C:\ProgramData\FocusLock, pero
+# por si alguien copia uno acá por error:
+config.json
+config.json.bak*
+state.json
+state.json.bak*
+*.key
+*.pem
+.env
+
+# Editores y sistema
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

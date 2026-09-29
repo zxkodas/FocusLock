@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>FocusLock — configuración</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #15171c; color: #e6e8ee; margin: 0; padding: 28px;
+      max-width: 720px;
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { color: #8f98ad; margin: 0 0 24px; }
+    fieldset {
+      border: 1px solid #2a2f3a; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px;
+    }
+    legend { color: #8f98ad; padding: 0 6px; }
+    input[type=text] {
+      width: 100%; box-sizing: border-box; background: #1b1e25; color: #e6e8ee;
+      border: 1px solid #2a2f3a; border-radius: 6px; padding: 9px 11px; font-family: ui-monospace, monospace;
+    }
+    button {
+      background: #2a6df4; color: #fff; border: 0; border-radius: 6px;
+      padding: 9px 16px; cursor: pointer; margin-top: 10px; font-size: 14px;
+    }
+    button.ghost { background: #242832; }
+    button:hover { filter: brightness(1.1); }
+    .state { padding: 12px 14px; border-radius: 8px; font-weight: 600; margin: 10px 0; }
+    .locked { background: #2a0f10; border: 1px solid #e5484d; }
+    .open   { background: #0d1a14; border: 1px solid #30a46c; }
+    .offline{ background: #241d10; border: 1px solid #d9a406; }
+    .muted { color: #8f98ad; font-size: 13px; }
+    code { background: #1b1e25; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+    ol { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>FocusLock</h1>
+  <p class="sub">Conexión con el servicio de Windows.</p>
+
+  <fieldset>
+    <legend>Paso 1 — Pegá la dirección que muestra FocusLock</legend>
+    <p class="muted">
+      En FocusLock, pestaña <strong>Ajustes</strong> → <strong>Extensión del navegador</strong> →
+      <strong>Copiar dirección</strong>. Tiene la forma
+      <code>http://127.0.0.1:PORT/state?token=...</code>
+    </p>
+    <input type="text" id="endpoint" placeholder="http://127.0.0.1:41234/state?token=..." />
+    <div>
+      <button id="save">Guardar y conectar</button>
+      <button id="test" class="ghost">Probar</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Estado</legend>
+    <div id="state" class="state offline">Sin configurar</div>
+    <div id="detail" class="muted"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Instalación</legend>
+    <ol class="muted">
+      <li>En Chrome: <code>chrome://extensions</code> → activá <strong>Modo de desarrollador</strong>.</li>
+      <li><strong>Cargar descomprimida</strong> → elegí la carpeta <code>extension/chrome</code>.</li>
+      <li>Volvé acá, pegá la dirección y guardá.</li>
+    </ol>
+  </fieldset>
+
+  <script src="options.js"></script>
+</body>
+</html>
