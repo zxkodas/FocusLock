@@ -169,6 +169,66 @@ class TestExtensionFiles(unittest.TestCase):
                 popup = (EXT / browser / "popup.js").read_text(encoding="utf-8")
                 self.assertRegex(popup, r'VERSION\s*=\s*"')
 
+    # ------------------------------------------------------------------
+    # Sincronizacion de version entre los tres lugares donde aparece.
+    # Si divergen, el popup muestra una version y el worker otra, y el
+    # paquete que sube AMO dice una cosa y el codigo otra.
+    # ------------------------------------------------------------------
+    def _manifest(self, browser: str) -> dict:
+        return json.loads((EXT / browser / "manifest.json").read_text(encoding="utf-8"))
+
+    def _popup_version(self, browser: str) -> str:
+        popup = (EXT / browser / "popup.js").read_text(encoding="utf-8")
+        match = re.search(r'VERSION\s*=\s*"([^"]+)"', popup)
+        self.assertIsNotNone(match, "popup.js no declara VERSION")
+        return match.group(1)
+
+    def test_versions_match_between_browsers(self):
+        chrome = self._manifest("chrome")["version"]
+        firefox = self._manifest("firefox")["version"]
+        self.assertEqual(
+            chrome, firefox,
+            f"Chrome dice {chrome} y Firefox {firefox}. Subir solo uno rompe la suite.",
+        )
+
+    def test_popup_version_matches_manifest(self):
+        """El popup muestra major.minor, sin el patch."""
+        for browser in BROWSERS:
+            with self.subTest(browser=browser):
+                manifest = self._manifest(browser)["version"]
+                expected = ".".join(manifest.split(".")[:2])
+                self.assertEqual(
+                    self._popup_version(browser), expected,
+                    f"popup.js dice una version y el manifest dice {manifest}",
+                )
+
+    def test_firefox_declares_data_collection(self):
+        """AMO rechaza la subida sin data_collection_permissions.
+
+        Requisito de addons.mozilla.org. FocusLock no recoge datos de nadie,
+        asi que declara "none".
+        """
+        gecko = self._manifest("firefox")["browser_specific_settings"]["gecko"]
+        self.assertIn(
+            "data_collection_permissions", gecko,
+            "falta data_collection_permissions: AMO rechaza la subida",
+        )
+        self.assertEqual(gecko["data_collection_permissions"]["required"], ["none"])
+
+    def test_firefox_min_version_supports_that_key(self):
+        """La clave no existe antes de Firefox 140; declararlo mas bajo avisa."""
+        gecko = self._manifest("firefox")["browser_specific_settings"]["gecko"]
+        self.assertIn("data_collection_permissions", gecko)
+        major = int(str(gecko["strict_min_version"]).split(".")[0])
+        self.assertGreaterEqual(
+            major, 140,
+            f"strict_min_version {gecko['strict_min_version']} es anterior a 140",
+        )
+
+    def test_chrome_manifest_has_no_browser_specific_settings(self):
+        """Chrome no valida ese campo y lo rechaza como desconocido."""
+        self.assertNotIn("browser_specific_settings", self._manifest("chrome"))
+
     def test_shipped_code_matches_development_code(self):
         """sw.js y popup.js se comparten: si divergen, el bug se repite."""
         for name in ("sw.js", "popup.js", "popup.html"):
