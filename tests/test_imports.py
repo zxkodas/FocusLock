@@ -96,6 +96,65 @@ class TestInternalImports(unittest.TestCase):
             with self.subTest(module=path.name):
                 ast.parse(path.read_text(encoding="utf-8"))
 
+    def test_no_hay_backslash_en_fstrings(self):
+        """Ninguna barra invertida puede quedar DENTRO de la parte de expresion
+        de un f-string.
+
+        PEP 701 (Python 3.12) lo permite; en 3.11 es SyntaxError. O sea: el
+        codigo anda perfecto en la maquina de desarrollo, que corre 3.14, y
+        revienta en la version minima que promete pyproject.toml. Eso paso de
+        verdad: un print de una ruta de Windows dentro de tr() dejo rojo el
+        CI en 3.11 y verde en 3.14 en la misma corrida.
+
+        OJO con la tentacion de resolverlo parseando con
+        ast.parse(src, feature_version=(3, 11)): NO funciona. feature_version
+        solo cubre un puñado de cambios (async como identificador, except*,
+        el walrus en comprehension) y no la gramatica de los f-strings. Se
+        comprobo: parsea el caso malo sin quejarse.
+        """
+        for path in sorted(PKG.rglob("*.py")):
+            with self.subTest(module=path.name):
+                arbol = ast.parse(path.read_text(encoding="utf-8"))
+                for nodo in ast.walk(arbol):
+                    if not isinstance(nodo, ast.JoinedStr):
+                        continue
+                    for parte in nodo.values:
+                        if isinstance(parte, ast.FormattedValue):
+                            expr = ast.unparse(parte.value)
+                            if "\\" in expr:
+                                self.fail(
+                                    f"{path.name}:{nodo.lineno}  la expresion "
+                                    f"{expr!r} tiene una barra invertida dentro "
+                                    f"de un f-string: SyntaxError en Python "
+                                    f"3.11. Sacale el prefijo f."
+                                )
+
+    def test_la_version_minima_es_la_que_declara_pyproject(self):
+        """Si pyproject sube el piso, la matriz de CI tiene que acompanar.
+
+        Sin esto, un requires-python que sube a 3.12 sigue teniendo la
+        matrix en 3.11 y el CI pasa probando una version que ya no se
+        promete. O al reves: el piso sube y nadie lo prueba.
+        """
+        import re
+
+        raiz = Path(__file__).resolve().parents[1]
+        texto = (raiz / "pyproject.toml").read_text(encoding="utf-8")
+        m = re.search(r'requires-python\s*=\s*">=\s*(\d+)\.(\d+)"', texto)
+        self.assertIsNotNone(m, "no se pudo leer requires-python")
+        piso = (int(m.group(1)), int(m.group(2)))
+
+        workflow = (raiz / ".github" / "workflows" / "tests.yml").read_text(
+            encoding="utf-8"
+        )
+        versiones = set(re.findall(r'"(\d+\.\d+)"', workflow))
+        self.assertTrue(versiones, "no encontre la matriz de Python en el CI")
+        self.assertIn(
+            f"{piso[0]}.{piso[1]}", versiones,
+            f"pyproject pide {piso[0]}.{piso[1]}+ y la matriz de CI prueba "
+            f"{sorted(versiones)}: falta la version minima",
+        )
+
     def test_cli_commands_are_importable(self):
         """Todos los subcomandos del CLI deben importar bien sin admin."""
         from focuslock import __main__ as cli

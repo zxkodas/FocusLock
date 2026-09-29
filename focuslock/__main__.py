@@ -144,7 +144,10 @@ def cmd_uninstall(args) -> int:
         print(f"  {tr('cleared')}: {exe}")
     print(f"{tr('Stopping and removing the service')}…")
     uninstall_service()
-    print(f"{tr('Done. You can delete C:\\ProgramData\\TickFence if you want to.')}")
+    # Sin f-string: la barra invertida de la ruta va DENTRO de la expresion
+    # tr(...), y eso es legal desde 3.12 (PEP 701) pero SyntaxError en 3.11.
+    # El prefijo f tampoco hacia falta, tr() no interpola nada.
+    print(tr("Done. You can delete C:\\ProgramData\\TickFence if you want to."))
     return 0
 
 
