@@ -10,14 +10,19 @@
 .PARAMETER Token
     Token de TickTick (formato tp_...). Se guarda cifrado con DPAPI.
 
+.PARAMETER Desinstalar
+    Desinstala en vez de instalar. Lo usa el desinstalador de Inno Setup.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File install.ps1
     powershell -ExecutionPolicy Bypass -File install.ps1 -Token "tp_..."
+    powershell -ExecutionPolicy Bypass -File install.ps1 -Desinstalar
 #>
 [CmdletBinding()]
 param(
     [string]$Token = "",
-    [string]$Python = "python"
+    [string]$Python = "python",
+    [switch]$Desinstalar
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +31,19 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 function Ok($msg)   { Write-Host "    $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "    $msg" -ForegroundColor Yellow }
+
+# --------------------------------------------------------------- desinstalar
+if ($Desinstalar) {
+    Step "Desinstalando"
+    Push-Location $root
+    try {
+        & $Python -m focuslock uninstall 2>&1 | ForEach-Object { Write-Host "    $_" }
+    } finally { Pop-Location }
+    Write-Host ""
+    Write-Host "  Servicio, IFEO y accesos directos desinstalados." -ForegroundColor Green
+    Write-Host "  Los datos quedan en C:\ProgramData\TickFence por si volves." -ForegroundColor Green
+    exit 0
+}
 
 # --------------------------------------------------------------- admin check
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -37,7 +55,24 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 Step "Entorno"
-Ok "Python: $(& $Python --version 2>&1)"
+
+# La version minima se valida ACA y no en el instalador de Inno. Razon: este
+# script es el camino de verdad, se lo puede correr a mano, y un chequeo en dos
+# lugares termina divergiendo. Ademas el error sale con su mensaje y no
+# tapado por el log del instalador.
+$pyTexto = (& $Python -c "import sys; print(str(sys.version_info[0]) + '.' + str(sys.version_info[1]))" 2>&1)
+$pyNumero = (& $Python -c "import sys; print(sys.version_info[0] * 100 + sys.version_info[1])" 2>&1)
+if ($LASTEXITCODE -ne 0 -or -not ($pyNumero -match '^\d+$')) {
+    Write-Host "No se pudo ejecutar Python. Revisá que esté en el PATH." -ForegroundColor Red
+    Write-Host "    $pyTexto"
+    exit 1
+}
+$pyVersion = [int]$pyNumero
+if ($pyVersion -lt 311) {
+    Write-Host "TickFence necesita Python 3.11 o superior y tenés $pyTexto." -ForegroundColor Red
+    exit 1
+}
+Ok "Python $pyTexto"
 
 # --------------------------------------------------------------- dependencias
 Step "Instalando dependencias"
