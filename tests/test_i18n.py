@@ -190,5 +190,79 @@ class TestHigieneDeTexto(unittest.TestCase):
         self.assertEqual("en", defaults["language"])
 
 
+class TestCadenasHuerfanas(unittest.TestCase):
+    """Detecta texto de usuario que se quedo AFUERA de tr().
+
+    Este es el agujero que los otros tests de este archivo no cubren, y
+    aparecio de verdad: un f-string con la razon del desbloqueo nunca paso
+    por tr(), asi que seguia en espanol mientras todo lo demas ya estaba
+    traducido. Los tests estaban verdes.
+
+    La diferencia es sutil pero es la que importa: los otros tests verifican
+    que lo que ENTRÓ a tr() tenga su traduccion. Este verifica lo contrario,
+    que nada deberia haber quedado afuera sin querer.
+
+    La heuristica es "tiene tildes, eñes o interrogacion de apertura", que
+    para ingles no aplica. Cuesta un falso positivo si alguien escribe un
+    nombre propio en espanol, y esa es una exception que vale la pena
+    agregar aca abajo en vez de relajar el patron.
+    """
+    ESP = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]")
+
+    def test_no_hay_texto_en_espanol_fuera_de_tr(self):
+        huerfanas = []
+        for rel in ARCHIVOS_TRADUCIBLES:
+            ruta = ROOT / rel
+            arbol = ast.parse(ruta.read_text(encoding="utf-8"))
+
+            dentro = set()
+            for nodo in ast.walk(arbol):
+                if isinstance(nodo, ast.Call):
+                    f = nodo.func
+                    nombre = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+                    if nombre == "tr":
+                        for a in list(nodo.args) + [k.value for k in nodo.keywords]:
+                            for sub in ast.walk(a):
+                                if isinstance(sub, ast.Constant):
+                                    dentro.add(id(sub))
+
+            docstrings = set()
+            for nodo in ast.walk(arbol):
+                if isinstance(nodo, (ast.Module, ast.ClassDef, ast.FunctionDef)):
+                    cuerpo = getattr(nodo, "body", [])
+                    if (cuerpo and isinstance(cuerpo[0], ast.Expr)
+                            and isinstance(cuerpo[0].value, ast.Constant)
+                            and isinstance(cuerpo[0].value.value, str)):
+                        docstrings.add(id(cuerpo[0].value))
+
+            stylesheet = {
+                nodo.value.lineno
+                for nodo in ast.walk(arbol)
+                if isinstance(nodo, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "STYLE" for t in nodo.targets)
+                and isinstance(nodo.value, ast.Constant)
+            }
+
+            for nodo in ast.walk(arbol):
+                if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
+                    texto = nodo.value
+                elif isinstance(nodo, ast.JoinedStr):
+                    texto = ast.unparse(nodo)
+                else:
+                    continue
+                if not self.ESP.search(texto):
+                    continue
+                if id(nodo) in dentro or id(nodo) in docstrings:
+                    continue
+                if nodo.lineno in stylesheet:
+                    continue
+                huerfanas.append(f"  {rel}:{nodo.lineno}  {texto[:70]}")
+
+        self.assertEqual(
+            [], huerfanas,
+            "texto en espanol que no pasa por tr():\n" + "\n".join(huerfanas[:10]),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

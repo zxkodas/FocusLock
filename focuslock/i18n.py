@@ -360,6 +360,38 @@ ES: dict[str, str] = {
     "reason": "razón",
     "pending": "pendientes",
     "server": "servidor",
+    # -- mensajes del servicio que no son f-strings -----------------------
+    "Lock on. {n} program(s) blocked at the Windows level. Finish the Readings to release them.": (
+        "Bloqueo activado. {n} programa(s) bloqueados a nivel Windows. "
+        "Completá las Lecturas para liberarlos."
+    ),
+    "Unlocked for {n} min. Your commitment was recorded.": (
+        "Desbloqueado por {n} min. Quedó registrado tu compromiso."
+    ),
+    "Invalid or empty value.": "Valor inválido o vacío.",
+    "{v} is a critical system or Windows process. Blocking it can leave the machine unusable, or stop the app itself from opening again.": (
+        "{v} es un proceso crítico del sistema o de Windows. Bloquearlo puede "
+        "dejar la PC inutilizable o impedir que la propia app vuelva a abrirse."
+    ),
+    "TickTick: {c} tasks completed in {p}": (
+        "TickTick: {c} tareas completadas en {p}"
+    ),
+    "TickFence in no-lock mode": "TickFence en modo sin bloqueo",
+    (
+        "The Windows service is not running, so TickFence will show your "
+        "Reading status and save your settings, but it will NOT block any "
+        "program.\n\n"
+    ): (
+        "El servicio de Windows no está corriendo, así que TickFence va a "
+        "mostrarte el estado de tus Lecturas y a guardar la configuración, "
+        "pero NO va a bloquear ningún programa.\n\n"
+    ),
+    "To make it really block, install it once as administrator:\n\n": (
+        "Para que bloquee de verdad, instalalo una vez como administrador:\n\n"
+    ),
+    "Meanwhile you can paste the token in Settings and watch it work.": (
+        "Mientras tanto podés pegar el token en Ajustes y verlo funcionar."
+    ),
 }
 
 

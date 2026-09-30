@@ -379,9 +379,9 @@ class Gate:
                 data_state = self._store.read()
                 data_state["locked"] = False
                 data_state["unlock_until"] = 0.0
-                data_state["unlock_reason"] = (
-                    f"TickTick: {credits} tareas completadas en {project_name}"
-                )
+                data_state["unlock_reason"] = tr(
+                    "TickTick: {c} tasks completed in {p}"
+                ).format(c=credits, p=project_name)
                 self._store.write()
                 unlocked = True
 

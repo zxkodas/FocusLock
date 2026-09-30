@@ -299,10 +299,10 @@ class Engine:
         return {
             "locked": True,
             "ifeo": applied,
-            "message": (
-                f"Bloqueo activado. {len(applied)} programa(s) bloqueados a nivel "
-                "Windows. Completá las Lecturas para liberarlos."
-            ),
+            "message": tr(
+                "Lock on. {n} program(s) blocked at the Windows level. Finish "
+                "the Readings to release them."
+            ).format(n=len(applied)),
         }
 
     def _cmd_unlock(self, req: dict) -> dict:
@@ -355,7 +355,9 @@ class Engine:
             "words": verdict.words,
             "seconds": verdict.seconds,
             "minutes": minutes,
-            "message": f"Desbloqueado por {minutes} min. Quedó registrado tu compromiso.",
+            "message": tr(
+                "Unlocked for {n} min. Your commitment was recorded."
+            ).format(n=minutes),
         }
 
     def _cmd_history(self, req: dict) -> dict:
@@ -459,7 +461,7 @@ class Engine:
         else:
             value = norm_site(value)
         if not value:
-            raise ValueError("Valor inválido o vacío.")
+            raise ValueError(i18n.tr("Invalid or empty value."))
 
         def _norm(v: str) -> str:
             return norm_program(v) if section == "programs" else norm_site(v)
@@ -505,11 +507,11 @@ class Engine:
                     "dangerous": True,
                     "value": value,
                     "list": items,
-                    "message": (
-                        f"{value} es un proceso crítico del sistema o de Windows. "
-                        "Bloquearlo puede dejar la PC inutilizable o impedir que "
-                        "la propia app vuelva a abrirse."
-                    ),
+                    "message": i18n.tr(
+                        "{v} is a critical system or Windows process. Blocking "
+                        "it can leave the machine unusable, or stop the app "
+                        "itself from opening again."
+                    ).format(v=value),
                 }
         else:
             items = [i for i in items if i != value]

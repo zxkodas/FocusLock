@@ -1369,13 +1369,15 @@ class TrayApp:
         """Sin servicio la app funciona, pero no bloquea. Hay que decirlo."""
         QMessageBox.information(
             self.window,
-            "TickFence en modo sin bloqueo",
-            "El servicio de Windows no está corriendo, así que TickFence va a "
-            "mostrarte el estado de tus Lecturas y a guardar la configuración, "
-            "pero NO va a bloquear ningún programa.\n\n"
-            "Para que bloquee de verdad, instalalo una vez como administrador:\n\n"
-            "    powershell -ExecutionPolicy Bypass -File install.ps1\n\n"
-            "Mientras tanto podés pegar el token en Ajustes y verlo funcionar.",
+            tr("TickFence in no-lock mode"),
+            tr(
+                "The Windows service is not running, so TickFence will show "
+                "your Reading status and save your settings, but it will NOT "
+                "block any program.\n\n"
+            )
+            + tr("To make it really block, install it once as administrator:\n\n")
+            + "    powershell -ExecutionPolicy Bypass -File install.ps1\n\n"
+            + tr("Meanwhile you can paste the token in Settings and watch it work."),
         )
 
 
