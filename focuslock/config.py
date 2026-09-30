@@ -155,6 +155,17 @@ class Config:
         with _LOCK:
             if data is not None:
                 self._data = _deep_merge(DEFAULTS, data)
+            elif not self._data:
+                # Trampa: Config(path).save() sin load() antes escribia "{}"
+                # y eso BORRABA la config entera, con el token de TickTick
+                # adentro. No hay ningun call site que lo haga hoy, pero el
+                # archivo del que depende el producto entero no deberia
+                # depender de que cada uno se acuerde de llamar load().
+                if self._path.exists() and self._path.stat().st_size > 2:
+                    self.load()
+                else:
+                    # Archivo nuevo o vacio: defaults es lo correcto.
+                    self._data = _deep_merge(DEFAULTS, {})
             payload = json.dumps(self._data, indent=2, ensure_ascii=False)
             self._path.parent.mkdir(parents=True, exist_ok=True)
             handle, tmp = tempfile.mkstemp(

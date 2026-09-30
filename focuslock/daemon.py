@@ -431,6 +431,15 @@ class Engine:
         if not section or not isinstance(values, dict):
             raise ValueError("Falta 'section' o 'values'")
         self.config.set(section, values)
+        # SIN ESTA LINEA el cambio vivia solo en memoria. Config.set() hace
+        # merge pero no escribe, y el servicio se reinicia (o se apaga la
+        # maquina), asi que todo lo que guardaras en la ventana se perdia.
+        # Se comprobo: config_set con poll_seconds=77 dejaba al servicio
+        # diciendo 77 y el archivo con 45, sin tocarse.
+        #
+        # Se guarda aca y no en cada handler de seccion porque TODO
+        # config_set tiene que persistir, no solo los que alguien se acordaba.
+        self.config.save()
         if section == "programs":
             self._sync_ifeo(force=True)
         if section == "general":
