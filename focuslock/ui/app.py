@@ -1389,6 +1389,7 @@ class TrayApp:
             self.window.activateWindow()
 
     def run(self) -> int:
+        self._sync_dev_shortcut()
         self.window.show()
         self.window._fill_rules()
         self.window._load_history()
@@ -1396,6 +1397,28 @@ class TrayApp:
         if not self.using_service:
             self._show_standalone_notice()
         return self.qt.exec()
+
+    @staticmethod
+    def _sync_dev_shortcut() -> None:
+        """Mantiene el acceso de desarrollo al dia al abrir la app.
+
+        Solo cuando se esta corriendo desde el codigo fuente. En una
+        instalacion normal no hay proyecto que apuntar y el acceso sobra, asi
+        que se borra: un ícono que no abre nada es peor que no tenerlo.
+        """
+        try:
+            from ..shortcuts import (
+                _project_dir,
+                create_dev_shortcut,
+                remove_dev_shortcuts,
+            )
+
+            if _project_dir() is None:
+                remove_dev_shortcuts()
+            else:
+                create_dev_shortcut()
+        except Exception:  # noqa: BLE001
+            pass  # un ícono de mas no puede impedir abrir la app
 
     def _show_standalone_notice(self) -> None:
         """Sin servicio la app funciona, pero no bloquea. Hay que decirlo."""

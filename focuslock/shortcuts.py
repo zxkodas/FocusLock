@@ -75,6 +75,18 @@ def _project_dir() -> Path | None:
 # mostrando: se ven dos íconos y la búsqueda devuelve el nombre viejo.
 NOMBRES_ANTIGUOS = ("FocusLock.lnk",)
 
+# Acceso de DESARROLLO. Convive con el de la release a proposito.
+#
+# El del Escritorio abre la release: es la que ve un usuario, no cambia
+# porque edites una linea, y es la unica que sobrevive si borraste o moviste
+# la carpeta. Este abre lo que estas programando, y se borra solo cuando el
+# proyecto deja de existir.
+DEV_NOMBRE = "TickFence (dev)"
+
+
+def _dev_link_paths() -> list[Path]:
+    return [carpeta / f"{DEV_NOMBRE}.lnk" for carpeta in (START_MENU, DESKTOP)]
+
 
 def _link_paths() -> list[Path]:
     return [START_MENU / "TickFence.lnk", DESKTOP / "TickFence.lnk"]
@@ -89,6 +101,66 @@ def _stale_link_paths() -> list[Path]:
         for nombre in NOMBRES_ANTIGUOS
         if nombre.lower() not in actuales
     ]
+
+
+def create_dev_shortcut() -> list[Path]:
+    """Crea el acceso que abre la app desde la carpeta del proyecto.
+
+    Devuelve lista vacia si no hay codigo fuente: en una instalacion normal
+    este acceso no significa nada, y un ícono que no abre nada es peor que
+    ningun ícono.
+    """
+    proyecto = _project_dir()
+    if proyecto is None:
+        return []
+
+    import pythoncom
+    from win32com.shell import shell
+
+    created: list[Path] = []
+    target, args = _launcher()
+    for link_path in _dev_link_paths():
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            link = pythoncom.CoCreateInstance(
+                shell.CLSID_ShellLink,
+                None,
+                pythoncom.CLSCTX_INPROC_SERVER,
+                shell.IID_IShellLink,
+            )
+            link.SetPath(target)
+            link.SetArguments(args)
+            link.SetDescription("TickFence - desarrollo")
+            # ACA ESTA TODO EL MECANISMO: el directorio de trabajo es el
+            # proyecto, y eso hace que `python -m focuslock` importe el
+            # paquete de aca y no el de site-packages.
+            link.SetWorkingDirectory(str(proyecto))
+            icono = _icon_path()
+            if icono.exists():
+                link.SetIconLocation(str(icono), 0)
+            link.QueryInterface(pythoncom.IID_IPersistFile).Save(str(link_path), 0)
+            created.append(link_path)
+        except Exception:
+            continue
+    return created
+
+
+def remove_dev_shortcuts() -> list[str]:
+    """Saca el acceso de desarrollo.
+
+    Corre en cada arranque de la GUI desde el codigo fuente. Si moviste o
+    borraste la carpeta del proyecto, el ícono tiene que irse solo, o queda
+    apuntando a algo que no abre.
+    """
+    removed: list[str] = []
+    for link_path in _dev_link_paths():
+        if link_path.exists():
+            try:
+                link_path.unlink()
+                removed.append(str(link_path))
+            except OSError:
+                pass
+    return removed
 
 
 def create_shortcuts() -> list[Path]:
