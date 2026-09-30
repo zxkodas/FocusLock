@@ -122,6 +122,27 @@ NEVER_BLOCK = {
     "focuslock.exe",
     "focuslock_svc.exe",
     "opencode.exe",
+
+    # --- El interprete ---
+    #
+    # TickFence ES un programa de Python: el servicio corre con
+    # pythonservice.exe, la ventana y el aviso de bloqueo con pythonw.exe, y el
+    # modo console con python.exe. Bloquear cualquiera de los tres es
+    # encerrarse.
+    #
+    # El caso de pythonw.exe es el que duele: no le pega al servicio (que se
+    # llama pythonservice.exe y ademas protege su propio PID), asi que el
+    # bloqueo sigue activo y el servicio sigue andando, pero la ventana
+    # MUERE. Quedas con el bloqueo puesto y sin ventana para desbloquear:
+    # tenes que pelearte con la CLI o desinstalar a mano.
+    #
+    # No es hipotetico. Durante la traduccion se comprobo que is_dangerous()
+    # no reconociera ninguno de los tres, y su chequeo de "empieza por
+    # focuslock o tickfence" mira un nombre que este proyecto ya no tiene:
+    # los procesos reales se llaman python*.
+    "python.exe",
+    "pythonw.exe",
+    "pythonservice.exe",
 }
 
 DEFAULT_DANGEROUS = {

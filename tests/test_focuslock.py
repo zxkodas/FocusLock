@@ -100,6 +100,67 @@ class TestProgramRules(unittest.TestCase):
         self.assertFalse(rules.match_program("notepad.exe", ["steam.exe"], []))
 
 
+class TestInterpreterIsUnblockable(unittest.TestCase):
+    """TickFence corre sobre Python. Python no se puede bloquear.
+
+    Si el usuario pone pythonw.exe en la lista de bloqueados, el guard mata la
+    ventana. El servicio sobrevive (es pythonservice.exe, y ademas protege su
+    propio PID), asi que el bloqueo sigue activo: quedas encerrado sin
+    ventana para desbloquear.
+
+    Estos tests cubren las dos capas:
+
+      - match_program: el proceso tiene que|matchear| la lista de bloqueados
+      - guard.is_dangerous: la UI tiene que avisar antes de confirmarlo
+    """
+
+    # (rol, ejecutable real)
+    PROCESOS = (
+        ("el servicio", "pythonservice.exe"),
+        ("la ventana", "pythonw.exe"),
+        ("el aviso de bloqueo", "pythonw.exe"),
+        ("el modo console", "python.exe"),
+    )
+
+    def test_el_guard_nunca_acepta_bloquear_python(self):
+        from focuslock import guard
+
+        for nombre in ("python.exe", "pythonw.exe", "pythonservice.exe"):
+            with self.subTest(exe=nombre):
+                self.assertFalse(
+                    rules.match_program(nombre, [nombre], []),
+                    f"{nombre} matchea la lista de bloqueados: el guard lo mataria",
+                )
+
+    def test_is_dangerous_lo_sabe(self):
+        """Sin esto la UI no pide confirmacion y lo agrega en silencio."""
+        from focuslock import guard
+
+        for nombre in ("python.exe", "pythonw.exe", "pythonservice.exe"):
+            with self.subTest(exe=nombre):
+                self.assertTrue(guard.is_dangerous(nombre))
+
+    def test_bloquear_python_no_toca_a_tickfence(self):
+        """El escenario completo: bloquear pythonw.exe mata la ventana?
+
+        Este es el que se quedo sin cubrir cuando la app todavia no se
+        traducía. El servicio tiene que sobrevivir Y la ventana tambien: si la
+        ventana muere con el bloqueo activo, no hay forma de salir.
+        """
+        from focuslock import guard
+
+        for nombre in ("python.exe", "pythonw.exe", "pythonservice.exe"):
+            for rol, ejecutable in self.PROCESOS:
+                with self.subTest(bloquea=nombre, rol=rol):
+                    matchea = rules.match_program(ejecutable, [nombre], [])
+                    if matchea:
+                        self.assertTrue(
+                            guard.is_dangerous(ejecutable),
+                            f"bloquear {nombre} le pega a {rol} ({ejecutable}) "
+                            f"y is_dangerous() no lo avisa",
+                        )
+
+
 # --------------------------------------------------------------------------
 class TestEmergency(unittest.TestCase):
     CFG = {"emergency": {"min_words": 300, "min_minutes": 5, "unlock_minutes": 20}}
