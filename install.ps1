@@ -108,23 +108,25 @@ $flPerms | ForEach-Object { Write-Host "    $_" }
 if ($LASTEXITCODE -ne 0) { Warn "No se pudieron ajustar los permisos: $flPerms" }
 
 # --------------------------------------------------------------- resumen
+# Esto lo lee primero un usuario nuevo, y la app arranca en ingles. Un
+# mensaje en español en la unica pantalla que ve durante la instalacion se
+# siente como que se instalo otra cosa.
 Write-Host ""
 Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "  TickFence instalado" -ForegroundColor Green
+Write-Host "  TickFence installed" -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "1) Abrí la app (NO como administrador):"
+Write-Host "1) Open the app (NOT as administrator):"
 Write-Host "     $Python -m focuslock gui"
 Write-Host ""
-Write-Host "2) En la pestaña Ajustes -> 'Extensión del navegador':"
-Write-Host "     copiá la dirección."
-Write-Host "   Chrome  : chrome://extensions -> Modo desarrollador -> Cargar descomprimida"
-Write-Host "             -> carpeta '$root\extension\chrome'"
-Write-Host "   Firefox : about:debugging#/runtime/this-firefox -> Cargar complemento temporal"
+Write-Host "2) In the Settings tab, under 'Browser extension', copy the address."
+Write-Host "   Chrome  : chrome://extensions -> Developer mode -> Load unpacked"
+Write-Host "             -> folder '$root\extension\chrome'"
+Write-Host "   Firefox : about:debugging#/runtime/this-firefox -> Load Temporary Add-on"
 Write-Host "             -> '$root\extension\firefox\manifest.json'"
-Write-Host "   Después abrí las opciones de la extensión y pegá la dirección."
+Write-Host "   Then open the extension's options page and paste the address."
 Write-Host ""
-Write-Host "3) Cargá el token de TickTick en Ajustes si no lo pasaste con -Token."
+Write-Host "3) Paste your TickTick token in Settings if you did not pass -Token."
 Write-Host ""
-Write-Host "Para desinstalar:  $Python -m focuslock uninstall   (como administrador)"
+Write-Host "To uninstall:  $Python -m focuslock uninstall   (as administrator)"
 Write-Host ""

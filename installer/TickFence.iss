@@ -22,6 +22,13 @@ AppSupportURL={#AppURL}
 DefaultDirName={autopf}\TickFence
 DefaultGroupName=TickFence
 DisableProgramGroupPage=yes
+
+; SIN esta directiva, {pf} resuelve a "C:\Program Files (x86)" en un Windows
+; de 64 bits, y el programa queda instalado ahi. Nada se rompe, pero queda
+; en el arbol equivocado y el acceso directo apunta a un path de 32 bits.
+; Se perdio al reescribir el .iss y solo se noto cuando se instalo de verdad
+; y se busco en Program Files y no estaba.
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
 OutputBaseFilename=TickFence-Setup-{#AppVersion}
 SetupIconFile=assets\tickfence.ico
@@ -99,9 +106,16 @@ var
   Codigo: Integer;
   Comando: String;
 begin
-  Comando := '/c powershell -NoProfile -ExecutionPolicy Bypass -File "';
-  Comando := Comando + ExpandConstant('{app}\install.ps1');
-  Comando := Comando + '" > "' + ExpandConstant('{app}\install.log') + '" 2>&1';
+  (* El log se escribe con Out-File -Encoding utf8 y NO con ">" de cmd.exe.
+     La redireccion de cmd escribe en la codificacion de consola (CP850 en
+     esta maquina) y los acentos y la enye del mensaje final quedan bytes
+     rotos: el log tinha 20 caracteres de reemplazo. Ese archivo es
+     justamente al que se le dice al usuario que mire cuando algo falla,
+     asi que tiene que ser legible. *)
+  Comando := '/c powershell -NoProfile -ExecutionPolicy Bypass -Command "';
+  Comando := Comando + '& ''' + ExpandConstant('{app}\install.ps1') + ''' 2>&1';
+  Comando := Comando + ' | Out-File -FilePath ''' + ExpandConstant('{app}\install.log');
+  Comando := Comando + ''' -Encoding utf8"';
   Codigo := -1;
   Exec(ExpandConstant('{sys}\cmd.exe'), Comando, ExpandConstant('{app}'),
        SW_HIDE, ewWaitUntilTerminated, Codigo);
