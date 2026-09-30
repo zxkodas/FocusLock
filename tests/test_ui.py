@@ -160,7 +160,16 @@ class QtTestCase(unittest.TestCase):
     def setUpClass(cls):
         from PySide6.QtWidgets import QApplication
 
+        from focuslock.ui.app import STYLE
+
         cls.app = QApplication.instance() or QApplication([])
+        # Sin esto los tests corren contra un arbol de widgets SIN la hoja de
+        # estilos: fuentes, rellenos y alto de campo distintos de los de la app
+        # real. Los bugs de layout que solo aparecen con la app estilada se les
+        # escapan por completo. Ya paso: el centrado vertical de las etiquetas
+        # daba OK con el bug presente, porque sin estilos el campo y la etiqueta
+        # miden lo mismo y el desvio no existe.
+        cls.app.setStyleSheet(STYLE)
 
 
 class TestMainWindow(QtTestCase):
@@ -294,6 +303,87 @@ class TestMainWindow(QtTestCase):
         QApplication.instance().processEvents()
         self.window.layout().activate()
         QApplication.instance().processEvents()
+
+    def _pares_de_ajustes(self) -> list:
+        """(etiqueta, campo) de cada fila de las cuatro tarjetas."""
+        pares = []
+        for form in self.window._forms_ajustes:
+            for fila in range(form.rowCount()):
+                li = form.itemAt(fila, QFormLayout.LabelRole)
+                fi = form.itemAt(fila, QFormLayout.FieldRole)
+                if li is None or li.widget() is None or fi is None:
+                    continue
+                etiqueta = li.widget()
+                campo = fi.widget()
+                # En una fila spanning itemAt(..., FieldRole) devuelve la
+                # etiqueta de ayuda, que no es un campo.
+                if campo is None or isinstance(campo, QLabel):
+                    continue
+                pares.append((etiqueta, campo))
+        return pares
+
+    def test_las_etiquetas_estan_centradas_con_su_campo(self):
+        """La etiqueta va a la altura del medio del campo, no arriba.
+
+        Con la politica Preferred el QLabel mide lo que mide el texto (19 px)
+        dentro de una celda de 32 px, y el texto queda 6 px por encima del
+        centro del campo. Se ve en todas las filas.
+        """
+        self._dejar_ajustes_visibles()
+        pares = self._pares_de_ajustes()
+        # Sin esta guarda, si el recorrido no encuentra filas el bucle no hace
+        # nada y el test pasa siempre. Ya paso: el test daba OK con el bug de
+        # los 6 px presente.
+        self.assertGreater(len(pares), 5, "no encontre las filas de Ajustes")
+        for etiqueta, campo in pares:
+            with self.subTest(fila=etiqueta.text()):
+                y_et = etiqueta.mapTo(self.window, etiqueta.rect().topLeft()).y()
+                y_ca = campo.mapTo(self.window, campo.rect().topLeft()).y()
+                centro_et = y_et + etiqueta.height() / 2
+                centro_ca = y_ca + campo.height() / 2
+                self.assertAlmostEqual(
+                    centro_et, centro_ca, delta=1.0,
+                    msg=f'"{etiqueta.text()}" no esta centrada con su campo',
+                )
+
+    def test_las_etiquetas_terminan_en_el_mismo_x(self):
+        """Con las etiquetas a la derecha, todas terminan en el mismo x.
+
+        Es lo que hace que la separacion con el campo sea igual en cada fila. A
+        la izquierda quedaba un borde prolijo pero la distancia variaba de 36 a
+        257 px, que es lo que mas se notaba.
+        """
+        self._dejar_ajustes_visibles()
+        from PySide6.QtCore import Qt
+
+        pares = self._pares_de_ajustes()
+        self.assertGreater(len(pares), 5, "no encontre las filas de Ajustes")
+        for etiqueta, _ in pares:
+            with self.subTest(fila=etiqueta.text()):
+                self.assertTrue(
+                    etiqueta.alignment() & Qt.AlignRight,
+                    f'"{etiqueta.text()}" no esta alineada a la derecha',
+                )
+
+    def test_todas_las_etiquetas_miden_lo_mismo(self):
+        """Es lo que hace que la separacion con el campo sea igual en cada fila.
+
+        Las etiquetas van alineadas a la derecha: si todas tienen el mismo
+        ancho, el texto de todas termina en el mismo x, y como los campos
+        arrancan todos en el mismo, la distancia es identica. Medir la
+        separacion desde el borde del widget no probaba nada: el layout siempre
+        deja ese borde pegado al campo, diga lo que diga el texto.
+        """
+        self._dejar_ajustes_visibles()
+        anchos = {
+            etiqueta.text(): etiqueta.width()
+            for etiqueta, _ in self._pares_de_ajustes()
+        }
+        self.assertGreater(len(anchos), 5, "no encontre las filas de Ajustes")
+        self.assertEqual(
+            1, len(set(anchos.values())),
+            f"las etiquetas no comparten el mismo ancho: {anchos}",
+        )
 
     def test_nav_and_stack_stay_in_sync(self):
         """Cada fila del menu tiene que mostrar su pagina."""

@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QFormLayout,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QStackedWidget,
@@ -656,9 +656,10 @@ class MainWindow(QMainWindow):
         }
 
     # ----------------------------------------------------------------- Ajustes
-    #: Separacion entre la columna de etiquetas y el campo. Es un riel: todo lo
-    #: que va en la columna de campos arranca a esta distancia de la etiqueta.
-    GAP_ETIQUETA = 18
+    #: Separacion entre el fin del texto de la etiqueta y el borde del campo.
+    #: Con las etiquetas a la derecha TODAS terminan en el mismo x, asi que esta
+    #: distancia es la misma en cada fila: no hace falta rellenar la columna.
+    GAP_ETIQUETA = 14
     #: Ancho de los campos editables. Sin tope, QFormLayout los estira a lo que
     #: sobra de la tarjeta y un spinbox de "45 s" queda de 1400 px de ancho.
     ANCHO_CAMPO = 340
@@ -724,16 +725,28 @@ class MainWindow(QMainWindow):
             )
         if ancho_texto <= 0:
             return
-        ancho_columna = ancho_texto + self.GAP_ETIQUETA
+        # Sin relleno extra. La etiqueta va alineada a la derecha, asi que
+        # todas terminan en el mismo x y la separacion la da el
+        # horizontalSpacing del form, no el ancho de la columna.
+        ancho_columna = ancho_texto
 
         for form in forms:
             for widget in self._etiquetas_de_columna(form):
                 widget.setFixedWidth(ancho_columna)
                 widget.setWordWrap(False)
-                # A la izquierda: alineadas a la derecha el borde izquierdo
-                # quedaba irregular, y "Token" a 60 px de "Minutes it unlocks
-                # for" se lee como desorden.
-                widget.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                # Que se estire a toda la altura de la celda. Con la politica
+                # Preferred el QLabel mide lo que mide el texto (19 px) dentro
+                # de una celda de 32 px, y el texto queda 6 px por encima del
+                # centro del campo. estirandolo, el alignment de abajo lo
+                # centra de verdad.
+                widget.setSizePolicy(
+                    QSizePolicy.Preferred, QSizePolicy.MinimumExpanding
+                )
+                # A la derecha: asi todas las etiquetas terminan en el mismo
+                # x y la separacion con el campo es igual en cada fila. A la
+                # izquierda quedaba un borde prolijo pero la distancia
+                # variaba de 36 a 257 px, que es lo que mas se notaba.
+                widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             for fila in range(form.rowCount()):
                 item = form.itemAt(fila, QFormLayout.FieldRole)
                 campo = item.widget() if item is not None else None
