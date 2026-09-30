@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QFrame,        # el area de scroll de Ajustes va sin marco
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -32,6 +33,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QFormLayout,
     QSpinBox,
     QSplitter,
@@ -458,7 +460,7 @@ class MainWindow(QMainWindow):
         # la derecha, no encima de la barra, donde compite con el color.
         head = QHBoxLayout()
         head.setContentsMargins(0, 0, 0, 0)
-        etiqueta = QLabel("Progreso hacia el desbloqueo")
+        etiqueta = QLabel(tr("Progress toward unlocking"))
         etiqueta.setObjectName("cardTitle")
         self.count = QLabel()
         self.count.setObjectName("count")
@@ -533,20 +535,26 @@ class MainWindow(QMainWindow):
         v.setSpacing(16)
 
         split = QSplitter()
-        self.prog_blocked = self._rule_list("Bloqueados", "programs", "blocked")
-        self.prog_allowed = self._rule_list("Permitidos (nunca se bloquean)", "programs", "allowed")
+        self.prog_blocked = self._rule_list(tr("Blocked"), "programs", "blocked")
+        self.prog_allowed = self._rule_list(
+            tr("Allowed (never blocked)"), "programs", "allowed"
+        )
         split.addWidget(self.prog_blocked["holder"])
         split.addWidget(self.prog_allowed["holder"])
         v.addWidget(split, 1)
 
         # La explicacion de IFEO va aca y no arriba: es una nota del control,
         # no un subtitulo de la pagina (que ya dice que elegiste que bloquear).
-        self.ifeo_check = QCheckBox("Usar IFEO — el programa ni siquiera llega a arrancar")
+        self.ifeo_check = QCheckBox(
+            tr("Use IFEO — the program never even gets to start")
+        )
         v.addWidget(self.ifeo_check)
         self.ifeo_note = QLabel(
-            "Sin IFEO el bloqueo es mas suave: el vigilante de procesos lo remata "
-            "si logra colarse. Con IFEO hace falta haber instalado TickFence como "
-            "administrador."
+            tr(
+                "Without IFEO the block is softer: the process guard finishes it "
+                "off if it slips through. With IFEO you have to have installed "
+                "TickFence as administrator."
+            )
         )
         self.ifeo_note.setWordWrap(True)
         self.ifeo_note.setObjectName("hint")
@@ -560,16 +568,18 @@ class MainWindow(QMainWindow):
         v.setSpacing(16)
 
         split = QSplitter()
-        self.site_blocked = self._rule_list("Dominios bloqueados", "sites", "blocked")
-        self.site_allowed = self._rule_list("Permitidos (exentos)", "sites", "allowed")
+        self.site_blocked = self._rule_list(tr("Blocked domains"), "sites", "blocked")
+        self.site_allowed = self._rule_list(tr("Allowed (exempt)"), "sites", "allowed")
         split.addWidget(self.site_blocked["holder"])
         split.addWidget(self.site_allowed["holder"])
         v.addWidget(split, 1)
 
         # Nota util, no subtitulo: el ejemplo de como escribir el dominio.
         info = QLabel(
-            "Se aceptan nombres sueltos: escribir 'youtube.com' alcanza para "
-            "www., m., music. y shorts."
+            tr(
+                "Plain names work: typing 'youtube.com' is enough to cover "
+                "www., m., music. and shorts."
+            )
         )
         info.setObjectName("hint")
         info.setWordWrap(True)
@@ -593,7 +603,9 @@ class MainWindow(QMainWindow):
         lay.addWidget(listing, 1)
 
         entry = QLineEdit()
-        entry.setPlaceholderText("Ej: steam.exe" if section == "programs" else "Ej: tiktok.com")
+        entry.setPlaceholderText(
+            tr("E.g: steam.exe") if section == "programs" else tr("E.g: tiktok.com")
+        )
         entry.returnPressed.connect(
             lambda: self._rule_add(section, field, listing, entry, False)
         )
@@ -601,10 +613,10 @@ class MainWindow(QMainWindow):
 
         row = QHBoxLayout()
         row.setSpacing(8)
-        add = QPushButton("Agregar")
+        add = QPushButton(tr("Add"))
         add.clicked.connect(lambda: self._rule_add(section, field, listing, entry, False))
         add.setObjectName("ghost")
-        remove = QPushButton("Quitar")
+        remove = QPushButton(tr("Remove"))
         remove.setObjectName("ghost")
         remove.clicked.connect(lambda: self._rule_del(section, field, listing))
         row.addWidget(add)
@@ -642,8 +654,28 @@ class MainWindow(QMainWindow):
         return card, body
 
     def _tab_settings(self) -> QWidget:
+        # TODO el cuerpo va dentro de un area de scroll. Sin esto, la pagina
+        # necesita 1154 px de alto: en una ventana de 1080 (que es lo que
+        # tiene cualquier pantalla de 1080p con la barra de tareas) el
+        # contenido no entra y Qt comprime la fila mas debil hasta turning los
+        # campos en una raya de dos pixeles. Se vio al sumar la tarjeta de
+        # idioma, que cruzo el limite. Con scroll no depende del tamano.
         page = QWidget()
-        v = QVBoxLayout(page)
+        outer = QVBoxLayout(page)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        body = QWidget()
+        scroll.setWidget(body)
+        outer.addWidget(scroll)
+
+        v = QVBoxLayout(body)
+        v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(16)
 
         tt, tt_body = self._card("TickTick")

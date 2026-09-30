@@ -232,6 +232,37 @@ class TestMainWindow(QtTestCase):
             self.client.config["general"].pop("language", None)
             i18n.set_lang(previo)
 
+    def test_ninguna_pagina_se_comprime_en_una_pantalla_chica(self):
+        """Ninguna pagina puede quedar mas alta que la ventana sin scroll.
+
+        Se rompio en vivo: al sumar la tarjeta de idioma, Ajustes paso a
+        pedir 1154 px de alto. En una ventana de 1080 (lo que tiene cualquier
+        pantalla de 1080p con la barra de tareas) el contenido no entra, y Qt
+        no recorta: COMPRIME la fila mas debil hasta dejar los campos con dos
+        pixeles de alto. La ventana seguia mostrando "Guardar" al final, asi
+        que no parecia ni un problema de scroll.
+
+        La regla: si la pagina pide mas alto del que tiene, tiene que haber un
+        area de scroll adentro. Con scroll el contenido puede ser largo sin
+        que nada se aplaste.
+        """
+        from PySide6.QtWidgets import QApplication, QScrollArea
+
+        altura_ventana = self.window.stack.height() or 1030
+        for fila in range(self.window.stack.count()):
+            with self.subTest(pagina=fila):
+                self.window.nav.setCurrentRow(fila)
+                QApplication.instance().processEvents()
+                pagina = self.window.stack.widget(fila)
+                necesita = pagina.minimumSizeHint().height()
+                if necesita <= altura_ventana:
+                    continue
+                self.assertIsNotNone(
+                    pagina.findChild(QScrollArea),
+                    f"la pagina {fila} pide {necesita} px y tiene "
+                    f"{altura_ventana}: sin scroll Qt la comprime",
+                )
+
     def test_nav_and_stack_stay_in_sync(self):
         """Cada fila del menu tiene que mostrar su pagina."""
         for fila in range(self.window.stack.count()):

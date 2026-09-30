@@ -392,6 +392,32 @@ ES: dict[str, str] = {
     "Meanwhile you can paste the token in Settings and watch it work.": (
         "Mientras tanto podés pegar el token en Ajustes y verlo funcionar."
     ),
+    # -- listas de programas y sitios -------------------------------------
+    "Progress toward unlocking": "Progreso hacia el desbloqueo",
+    "Blocked": "Bloqueados",
+    "Allowed (never blocked)": "Permitidos (nunca se bloquean)",
+    "Use IFEO — the program never even gets to start": (
+        "Usar IFEO — el programa ni siquiera llega a arrancar"
+    ),
+    (
+        "Without IFEO the block is softer: the process guard finishes it off "
+        "if it slips through. With IFEO you have to have installed TickFence "
+        "as administrator."
+    ): (
+        "Sin IFEO el bloqueo es mas suave: el vigilante de procesos lo remata "
+        "si logra colarse. Con IFEO hace falta haber instalado TickFence como "
+        "administrador."
+    ),
+    "Blocked domains": "Dominios bloqueados",
+    "Allowed (exempt)": "Permitidos (exentos)",
+    "Plain names work: typing 'youtube.com' is enough to cover www., m., music. and shorts.": (
+        "Se aceptan nombres sueltos: escribir 'youtube.com' alcanza para "
+        "www., m., music. y shorts."
+    ),
+    "Add": "Agregar",
+    "Remove": "Quitar",
+    "E.g: steam.exe": "Ej: steam.exe",
+    "E.g: tiktok.com": "Ej: tiktok.com",
 }
 
 
