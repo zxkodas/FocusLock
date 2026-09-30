@@ -22,6 +22,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from focuslock.ipc import IpcError  # noqa: E402
+from PySide6.QtWidgets import QApplication, QFormLayout, QLabel  # noqa: E402
 
 
 class FakeClient:
@@ -265,25 +266,11 @@ class TestMainWindow(QtTestCase):
                     f"{altura_ventana}: sin scroll Qt la comprime",
                 )
 
-    def test_los_campos_de_ajustes_arrancan_en_el_mismo_x(self):
-        from PySide6.QtWidgets import QApplication
-
-        """Todos los campos de Ajustes tienen que empezar en la misma x.
-
-        QFormLayout calcula el ancho de su columna de etiquetas a partir de la
-        etiqueta mas larga de SU tarjeta. Con cuatro tarjetas eso son cuatro
-        columnas distintas y los campos arrancan en cuatro x diferentes: cada
-        fila se ve bien y la pagina entera se ve torcida.
-
-        Esto mide la geometria real, no la intention del codigo.
-        """
-        from PySide6.QtWidgets import QApplication
-
-        self.window.nav.setCurrentRow(3)
-        self.window._fill_rules()
-        QApplication.instance().processEvents()
-
-        campos = {
+    #: Los campos de Ajustes, en el orden en que se ven. La direccion del
+    #: servidor queda aparte porque es de solo lectura y por eso tiene otro
+    #: ancho a proposito.
+    def _campos_de_ajustes(self) -> dict:
+        return {
             "idioma": self.window.lang_combo,
             "token": self.window.token,
             "proyecto": self.window.project_name,
@@ -292,55 +279,129 @@ class TestMainWindow(QtTestCase):
             "palabras": self.window.em_words,
             "minutos": self.window.em_minutes,
             "desbloquea": self.window.em_unlock,
-            "direccion": self.window.ext_url,
         }
-        xs = {
-            nombre: w.mapTo(self.window, w.rect().topLeft()).x()
-            for nombre, w in campos.items()
-        }
-        unico = set(xs.values())
-        self.assertEqual(
-            1, len(unico),
-            f"los campos no arrancan en la misma x: {xs}",
-        )
 
-    def test_la_columna_no_depende_del_idioma(self):
-        from PySide6.QtWidgets import QApplication
+    def _dejar_ajustes_visibles(self) -> None:
+        """Ajustes tiene que estar activa para que Qt le calculo la geometria.
 
-        """El ancho se mide con los dos idiomas, no solo con el activo.
-
-        Si se midiera solo el visible, cambiar de idioma descuadraria la pagina
-        justo despues de que el usuario eligio el idioma.
+        Sin esto la pagina existe pero no esta laysouteada, y todos los widgets
+        reportan la misma x. Ya paso: una medicion dio "perfectamente
+        alineado" sobre una pagina que en realidad no estaba medida.
         """
-        from focuslock import i18n
-        from focuslock.ui.app import MainWindow
+        self.window.nav.setCurrentRow(3)
+        self.window._fill_rules()
+        self.window.layout().activate()
+        QApplication.instance().processEvents()
+        self.window.layout().activate()
+        QApplication.instance().processEvents()
 
-        previo = i18n.lang()
-        try:
-            anchos = {}
-            for lang in ("en", "es"):
-                self.client.config["general"]["language"] = lang
-                v = MainWindow(self.client)
-                v.resize(900, 700)
-                v.show()
-                QApplication.instance().processEvents()
-                anchos[lang] = v._ancho_columna_etiquetas()
-                v._timer.stop()
-                v.close()
-                v.deleteLater()
-            self.assertEqual(
-                anchos["en"], anchos["es"],
-                "el ancho de la columna cambia con el idioma: la pagina se "
-                "descuadra al cambiar",
-            )
-        finally:
-            self.client.config["general"].pop("language", None)
-            i18n.set_lang(previo)
+    def test_nav_and_stack_stay_in_sync(self):
         """Cada fila del menu tiene que mostrar su pagina."""
         for fila in range(self.window.stack.count()):
             with self.subTest(fila=fila):
                 self.window.nav.setCurrentRow(fila)
                 self.assertEqual(self.window.stack.currentIndex(), fila)
+
+    def test_los_campos_de_ajustes_arrancan_en_el_mismo_x(self):
+        """Todos los campos arrancan en la misma x, en las cuatro tarjetas.
+
+        QFormLayout calcula el ancho de su columna de etiquetas a partir de la
+        etiqueta mas larga de SU tarjeta. Con cuatro tarjetas eso son cuatro
+        columnas distintas: cada fila se ve bien y la pagina entera se ve
+        torcida.
+        """
+        self._dejar_ajustes_visibles()
+        xs = {
+            nombre: w.mapTo(self.window, w.rect().topLeft()).x()
+            for nombre, w in self._campos_de_ajustes().items()
+        }
+        self.assertEqual(
+            1, len(set(xs.values())),
+            f"los campos no arrancan en la misma x: {xs}",
+        )
+
+    def test_los_campos_editables_tienen_el_mismo_ancho(self):
+        """Ancho FIJO, no un tope.
+
+        Con un tope cada campo toma su sizeHint y quedan de 95, 134 y 241 px:
+        el borde derecho sale irregular, que es justo lo que venia a
+        arreglar. La direccion del servidor es de solo lectura y va mas
+        ancha a proposito.
+        """
+        self._dejar_ajustes_visibles()
+        anchos = {n: w.width() for n, w in self._campos_de_ajustes().items()}
+        self.assertEqual(
+            1, len(set(anchos.values())),
+            f"los campos editables no comparten el mismo ancho: {anchos}",
+        )
+        self.assertGreater(
+            self.window.ext_url.width(),
+            self.window.token.width(),
+            "la direccion del servidor deberia ser mas ancha que el token",
+        )
+
+    def test_las_etiquetas_arrancan_en_el_mismo_x(self):
+        """Todas las etiquetas del riel izquierdo arrancan en la misma x."""
+        self._dejar_ajustes_visibles()
+        xs = {}
+        for form in self.window._forms_ajustes:
+            for etiqueta in self.window._etiquetas_de_columna(form):
+                xs[etiqueta.text()] = etiqueta.mapTo(
+                    self.window, etiqueta.rect().topLeft()).x()
+        self.assertGreater(len(xs), 5, "no encontre las etiquetas de Ajustes")
+        self.assertEqual(
+            1, len(set(xs.values())),
+            f"las etiquetas no arrancan en la misma x: {xs}",
+        )
+
+    def test_la_columna_de_etiquetas_no_se_come_la_tarjeta(self):
+        """Regresion: la columna se media con los textos de ayuda adentro.
+
+        Los textos de ayuda van en filas spanning y llevan saltos de linea.
+        Medidos con horizontalAdvance como si fueran una sola linea dan miles de
+        pixeles, la columna se comia la tarjeta entera (3242 px sobre 3438) y
+        los campos quedaban aplastados o directamente sin espacio.
+        """
+        self._dejar_ajustes_visibles()
+        for nombre, form in zip(
+            ("Language", "TickTick", "Emergency", "Extension"),
+            self.window._forms_ajustes,
+        ):
+            with self.subTest(tarjeta=nombre):
+                etiquetas = self.window._etiquetas_de_columna(form)
+                for etiqueta in etiquetas:
+                    self.assertLess(
+                        etiqueta.width(), 400,
+                        f'la etiqueta "{etiqueta.text()}" mide '
+                        f"{etiqueta.width()} px: se colaron los textos de ayuda",
+                    )
+                for campo in self._campos_de_ajustes().values():
+                    self.assertGreater(
+                        campo.width(), 200,
+                        "un campo quedo aplastado: la columna se comio la "
+                        "tarjeta",
+                    )
+
+    def test_los_textos_de_ayuda_no_toman_el_ancho_de_un_campo(self):
+        """Regresion: en una fila spanning, itemAt(FieldRole) devuelve la ayuda.
+
+        Sin esta guarda, el texto de ayuda recibia setFixedWidth(340) y se
+        cortaba a mitad de frase.
+        """
+        self._dejar_ajustes_visibles()
+        from focuslock.ui.app import MainWindow
+
+        for form in self.window._forms_ajustes:
+            for fila in range(form.rowCount()):
+                item = form.itemAt(fila, QFormLayout.SpanningRole)
+                ayuda = item.widget() if item is not None else None
+                if not isinstance(ayuda, QLabel):
+                    continue
+                with self.subTest(ayuda=ayuda.text()[:30]):
+                    self.assertNotEqual(
+                        ayuda.width(), MainWindow.ANCHO_CAMPO,
+                        "el texto de ayuda tomo el ancho de un campo y se corta",
+                    )
 
     def test_nav_ignores_out_of_range(self):
         """Una fila imposible no debe romper la app."""

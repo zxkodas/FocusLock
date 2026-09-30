@@ -656,69 +656,100 @@ class MainWindow(QMainWindow):
         }
 
     # ----------------------------------------------------------------- Ajustes
-    #: Etiquetas de las cuatro tarjetas de Ajustes. Se necesitan TODAS juntas
-    #: para poder medir una sola columna compartida: si se midiera tarjeta por
-    #: tarjeta, cada una saldria con su propio ancho y volveria el problema.
-    _AJUSTES_ETIQUETAS = (
-        "Interface language",
-        "Token",
-        "TickTick project",
-        "Readings needed",
-        "Poll interval",
-        "Minimum words",
-        "Writing minutes",
-        "Minutes it unlocks for",
-        "Address",
-    )
-
-    def _ancho_columna_etiquetas(self) -> int:
-        """Ancho unico para la columna de etiquetas de Ajustes.
-
-        Se mide con la fuente real y con los DOS idiomas, no solo el activo: si
-        se midiera solo el que se ve, cambiar de idioma desalinearia la pagina.
-        El margen extra es para que el texto no quede pegado al campo.
-        """
-        from PySide6.QtGui import QFontMetrics
-
-        fm = QFontMetrics(self.font())
-        ancho = 0
-        for clave in self._AJUSTES_ETIQUETAS:
-            for texto in (clave, i18n.ES.get(clave, clave)):
-                ancho = max(ancho, fm.horizontalAdvance(texto))
-        return ancho + 28
+    #: Separacion entre la columna de etiquetas y el campo. Es un riel: todo lo
+    #: que va en la columna de campos arranca a esta distancia de la etiqueta.
+    GAP_ETIQUETA = 18
+    #: Ancho de los campos editables. Sin tope, QFormLayout los estira a lo que
+    #: sobra de la tarjeta y un spinbox de "45 s" queda de 1400 px de ancho.
+    ANCHO_CAMPO = 340
+    #: La direccion del servidor es larga y solo se copia; angostarla obliga a
+    #: hacer scroll horizontal para leerla.
+    ANCHO_CAMPO_LARGO = 560
 
     @staticmethod
-    def _form_alineado(form, ancho_etiqueta: int, espacio: int) -> QFormLayout:
-        """QFormLayout con columna de etiquetas de ancho fijo y compartido.
+    def _form_alineado(form, espacio: int) -> QFormLayout:
+        """Deja el form con margenes y ritmo vertical consistentes.
 
-        setColumnMinimumWidth no alcanza: el layout sigue creciendo la columna
-        si una etiqueta es mas ancha. Lo que manda es el ancho de la etiqueta,
-        y eso lo aplica _fijar_etiquetas.
+        El ancho de la columna NO se decide aca: eso lo mide _alinear_ajustes
+        con las etiquetas ya en pantalla. Fijarlo aca fue el error anterior,
+        porque en este punto la hoja de estilos todavia no resolvio la fuente
+        y la medicion salia con la tipografia equivocada.
         """
         form.setContentsMargins(0, 0, 0, 0)
         form.setVerticalSpacing(espacio)
-        form.setHorizontalSpacing(0)
+        form.setHorizontalSpacing(MainWindow.GAP_ETIQUETA)
         form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        form.ancho_etiqueta = ancho_etiqueta
+        form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
         return form
 
-    def _fijar_etiquetas(self, form) -> None:
-        """Le da a cada etiqueta el ancho compartido.
+    @staticmethod
+    def _etiquetas_de_columna(form) -> list:
+        """Solo las etiquetas que van en la columna, junto a un campo.
 
-        Se recorre DESPUES de armar los textos: las etiquetas nacen de tr(), y
-        medirlas antes de existir daria ancho cero.
+        Las de SpanningRole quedan fuera a proposito: ocupan la fila entera y
+        son los textos de ayuda, que llevan saltos de linea. Medidos como si
+        fueran una sola linea dan miles de pixeles de ancho, y la columna se
+        comia la tarjeta entera dejando los campos sin espacio.
         """
-        ancho = getattr(form, "ancho_etiqueta", 0)
-        if not ancho:
-            return
+        etiquetas = []
         for fila in range(form.rowCount()):
             item = form.itemAt(fila, QFormLayout.LabelRole)
             widget = item.widget() if item is not None else None
             if isinstance(widget, QLabel):
-                widget.setFixedWidth(ancho)
-                widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                etiquetas.append(widget)
+        return etiquetas
+
+    def _alinear_ajustes(self, forms) -> None:
+        """Una sola columna de etiquetas y un tope de ancho para los campos.
+
+        Se mide con las etiquetas YA EXISTENTES y con SU tipografia ya
+        resuelta, y se toma el maximo de las cuatro tarjetas juntas. Medir
+        tarjeta por tarjeta devuelve cuatro columnas distintas; medir antes de
+        que la hoja de estilos aplique la fuente devuelve un numero falso.
+        """
+        todos = []
+        for form in forms:
+            todos.extend(self._etiquetas_de_columna(form))
+        if not todos:
+            return
+
+        # ensurePolished() fuerza a Qt a aplicar la hoja de estilos al widget
+        # antes de medir. Sin esto, fontMetrics() devuelve la fuente por
+        # defecto, que es mas chica que los 13px que impone el QSS.
+        ancho_texto = 0
+        for widget in todos:
+            widget.ensurePolished()
+            ancho_texto = max(
+                ancho_texto, widget.fontMetrics().horizontalAdvance(widget.text())
+            )
+        if ancho_texto <= 0:
+            return
+        ancho_columna = ancho_texto + self.GAP_ETIQUETA
+
+        for form in forms:
+            for widget in self._etiquetas_de_columna(form):
+                widget.setFixedWidth(ancho_columna)
                 widget.setWordWrap(False)
+                # A la izquierda: alineadas a la derecha el borde izquierdo
+                # quedaba irregular, y "Token" a 60 px de "Minutes it unlocks
+                # for" se lee como desorden.
+                widget.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            for fila in range(form.rowCount()):
+                item = form.itemAt(fila, QFormLayout.FieldRole)
+                campo = item.widget() if item is not None else None
+                # En una fila spanning, itemAt(..., FieldRole) devuelve la
+                # etiqueta de ayuda, no un campo editable. Sin esta guarda se
+                # le fijaba el ancho de un campo y el texto se cortaba.
+                if campo is None or isinstance(campo, QLabel):
+                    continue
+                # Ancho FIJO, no un tope. Con un tope cada campo toma su
+                # sizeHint y quedan de 95, 134 y 241 px: el borde derecho
+                # sale irregular, que es el problema que se vino a arreglar.
+                largo = getattr(campo, "isReadOnly", None)
+                if largo is not None and largo():
+                    campo.setFixedWidth(self.ANCHO_CAMPO_LARGO)
+                else:
+                    campo.setFixedWidth(self.ANCHO_CAMPO)
 
     def _card(self, titulo_texto: str) -> tuple:
         """Tarjeta con su titulo DENTRO. Devuelve (tarjeta, layout del cuerpo).
@@ -766,24 +797,11 @@ class MainWindow(QMainWindow):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(16)
 
-        # Un solo ancho de columna de etiquetas para TODA la pagina.
-        #
-        # QFormLayout calcula el ancho de su columna de etiquetas a partir de
-        # la mas larga de SU tarjeta. Con cuatro tarjetas eso son cuatro anchos
-        # distintos, y los campos arrancan en cuatro x diferentes: la pagina se
-        # ve desalineada aunque cada fila por separado este bien.
-        #
-        # "Minutes it unlocks for" es la mas larga en ingles y "Minutos que
-        # desbloquea" en español, asi que el ancho NO puede ser una constante
-        # escrita a mano: se mide con la fuente real y se comparte. Asi el
-        # texto entra en los dos idiomas y la columna no depende de cual se
-        # este viendo.
-        ANCHO_ETIQUETA = self._ancho_columna_etiquetas()
         ESPACIO_VERTICAL = 14
 
         tt, tt_body = self._card("TickTick")
         tf = QFormLayout()
-        self._form_alineado(tf, ANCHO_ETIQUETA, ESPACIO_VERTICAL)
+        self._form_alineado(tf, ESPACIO_VERTICAL)
         tt_body.addLayout(tf)
         self.token = QLineEdit()
         self.token.setEchoMode(QLineEdit.Password)
@@ -844,7 +862,7 @@ class MainWindow(QMainWindow):
         # propio boton, y el aviso lo dice.
         lang_box, lang_body = self._card(tr("Language"))
         lf = QFormLayout()
-        self._form_alineado(lf, ANCHO_ETIQUETA, ESPACIO_VERTICAL)
+        self._form_alineado(lf, ESPACIO_VERTICAL)
         lang_body.addLayout(lf)
         self.lang_combo = QComboBox()
         for code in i18n.IDIOMAS:
@@ -864,7 +882,7 @@ class MainWindow(QMainWindow):
 
         em_box, em_body = self._card(tr("Emergency"))
         ef = QFormLayout()
-        self._form_alineado(ef, ANCHO_ETIQUETA, ESPACIO_VERTICAL)
+        self._form_alineado(ef, ESPACIO_VERTICAL)
         em_body.addLayout(ef)
         self.em_words = QSpinBox()
         self.em_words.setRange(50, 5000)
@@ -880,7 +898,7 @@ class MainWindow(QMainWindow):
 
         ext, ext_body = self._card(tr("Browser extension"))
         xf = QFormLayout()
-        self._form_alineado(xf, ANCHO_ETIQUETA, ESPACIO_VERTICAL)
+        self._form_alineado(xf, ESPACIO_VERTICAL)
         ext_body.addLayout(xf)
         ext_hint = QLabel(
             tr(
@@ -923,8 +941,7 @@ class MainWindow(QMainWindow):
         # Al final, con los textos ya puestos: las etiquetas se arman con tr() y
         # hasta que existen no se les puede medir nada.
         self._forms_ajustes = (tf, lf, ef, xf)
-        for form in self._forms_ajustes:
-            self._fijar_etiquetas(form)
+        self._alinear_ajustes(self._forms_ajustes)
         return page
 
     # --------------------------------------------------------------- Bitácora
@@ -1283,8 +1300,7 @@ class MainWindow(QMainWindow):
         # Se reaplica por si la pagina se reconstruyo con otro idioma: sin
         # esto, cambiar de idioma y volver a esta pagina dejaria las columnas
         # con el ancho del idioma anterior.
-        for form in getattr(self, "_forms_ajustes", ()):
-            self._fijar_etiquetas(form)
+        self._alinear_ajustes(getattr(self, "_forms_ajustes", ()))
 
     def _test_token(self) -> None:
         """Guarda el token y consulta TickTick.
