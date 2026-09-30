@@ -418,6 +418,7 @@ ES: dict[str, str] = {
     "Remove": "Quitar",
     "E.g: steam.exe": "Ej: steam.exe",
     "E.g: tiktok.com": "Ej: tiktok.com",
+    "Refresh TickTick now": "Actualizar TickTick ahora",
 }
 
 

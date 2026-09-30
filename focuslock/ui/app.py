@@ -92,6 +92,30 @@ QLabel#err   { color:#f2a6a0; }
    negros sobre las tarjetas #242629. */
 QLabel, QCheckBox { background:transparent; }
 
+/* Etiquetas de los formularios (Token, Poll interval, Minimum words...).
+
+   Sin regla propia caian en el QLabel generico de arriba: mismo color y mismo
+   tamano que el texto de las tarjetas, y pegadas a dos pixeles del campo. Se
+   leian como texto suelto, no como la etiqueta de algo.
+
+   El color va apenas por debajo del texto normal (8.13:1 contra 13.05:1 sobre
+   la tarjeta, los dos muy arriba de 4.5:1) para que el ojo vaya al campo y no
+   a la etiqueta. El padding les da aire: sin el, "Token" parece pegado a la
+   caja. */
+QFormLayout QLabel {
+  color:#b9bec7;
+  padding-right:10px;
+  background:transparent;
+}
+
+/* Contenedor de los botones que ocupan las dos columnas del formulario.
+
+   El QWidget de arriba le pone fondo a TODO QWidget, y ese contenedor es un
+   QWidget comun: quedaba como un rectangulo mas oscuro (#1c1d20) pegado
+   sobre la tarjeta (#242629), que es el rectangulo raro que se veia al lado
+   de "Test connection and save". Transparent lo saca. */
+#formRow { background:transparent; }
+
 #card { background:#242629; border-radius:14px; }
 QLabel#cardTitle { font-size:15px; font-weight:600; color:#eceef1; }
 #page { background:#1c1d20; }
@@ -435,7 +459,7 @@ class MainWindow(QMainWindow):
         fila_titulo.setContentsMargins(0, 0, 0, 0)
         titulo = QLabel(tr("Status"))
         titulo.setObjectName("pageTitle")
-        self.btn_poll = QPushButton("Actualizar TickTick ahora")
+        self.btn_poll = QPushButton(tr("Refresh TickTick now"))
         self.btn_poll.setObjectName("ghost")
         self.btn_poll.setToolTip("Consultar TickTick ahora (no espera el intervalo)")
         self.btn_poll.clicked.connect(lambda: self.refresh(force=True))
@@ -704,7 +728,11 @@ class MainWindow(QMainWindow):
         # campos y los botones quedan estrujados contra el borde. Con un
         # widget contenedor que ocupa las dos columnas, cada boton conserva
         # su ancho. (SpanningRole no sirve: PySide6 expone insertRow, no setRow.)
+        # El objectName es lo que le saca el fondo: el QWidget universal del
+        # stylesheet le pone #1c1d20 y quedaba como un parche oscuro pegado
+        # sobre la tarjeta.
         fila = QWidget()
+        fila.setObjectName("formRow")
         fila.setLayout(row)
         fila.setContentsMargins(0, 0, 0, 0)
         tf.addRow(fila)
