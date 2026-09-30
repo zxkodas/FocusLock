@@ -199,6 +199,8 @@ class TestMainWindow(QtTestCase):
         """
         from PySide6.QtWidgets import QApplication
 
+        from PySide6.QtWidgets import QApplication
+
         from focuslock import i18n
         from focuslock.ui.app import MainWindow
 
@@ -263,7 +265,77 @@ class TestMainWindow(QtTestCase):
                     f"{altura_ventana}: sin scroll Qt la comprime",
                 )
 
-    def test_nav_and_stack_stay_in_sync(self):
+    def test_los_campos_de_ajustes_arrancan_en_el_mismo_x(self):
+        from PySide6.QtWidgets import QApplication
+
+        """Todos los campos de Ajustes tienen que empezar en la misma x.
+
+        QFormLayout calcula el ancho de su columna de etiquetas a partir de la
+        etiqueta mas larga de SU tarjeta. Con cuatro tarjetas eso son cuatro
+        columnas distintas y los campos arrancan en cuatro x diferentes: cada
+        fila se ve bien y la pagina entera se ve torcida.
+
+        Esto mide la geometria real, no la intention del codigo.
+        """
+        from PySide6.QtWidgets import QApplication
+
+        self.window.nav.setCurrentRow(3)
+        self.window._fill_rules()
+        QApplication.instance().processEvents()
+
+        campos = {
+            "idioma": self.window.lang_combo,
+            "token": self.window.token,
+            "proyecto": self.window.project_name,
+            "lecturas": self.window.required,
+            "poll": self.window.poll_secs,
+            "palabras": self.window.em_words,
+            "minutos": self.window.em_minutes,
+            "desbloquea": self.window.em_unlock,
+            "direccion": self.window.ext_url,
+        }
+        xs = {
+            nombre: w.mapTo(self.window, w.rect().topLeft()).x()
+            for nombre, w in campos.items()
+        }
+        unico = set(xs.values())
+        self.assertEqual(
+            1, len(unico),
+            f"los campos no arrancan en la misma x: {xs}",
+        )
+
+    def test_la_columna_no_depende_del_idioma(self):
+        from PySide6.QtWidgets import QApplication
+
+        """El ancho se mide con los dos idiomas, no solo con el activo.
+
+        Si se midiera solo el visible, cambiar de idioma descuadraria la pagina
+        justo despues de que el usuario eligio el idioma.
+        """
+        from focuslock import i18n
+        from focuslock.ui.app import MainWindow
+
+        previo = i18n.lang()
+        try:
+            anchos = {}
+            for lang in ("en", "es"):
+                self.client.config["general"]["language"] = lang
+                v = MainWindow(self.client)
+                v.resize(900, 700)
+                v.show()
+                QApplication.instance().processEvents()
+                anchos[lang] = v._ancho_columna_etiquetas()
+                v._timer.stop()
+                v.close()
+                v.deleteLater()
+            self.assertEqual(
+                anchos["en"], anchos["es"],
+                "el ancho de la columna cambia con el idioma: la pagina se "
+                "descuadra al cambiar",
+            )
+        finally:
+            self.client.config["general"].pop("language", None)
+            i18n.set_lang(previo)
         """Cada fila del menu tiene que mostrar su pagina."""
         for fila in range(self.window.stack.count()):
             with self.subTest(fila=fila):
