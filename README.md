@@ -103,7 +103,7 @@ Both are the same program. Pick the one you will actually keep.
 
 ### Step 1 — Install the service
 
-**The easy way:** download `TickFence-Setup-1.0.0.exe` from the
+**The easy way:** download `TickFence-Setup-1.1.0.exe` from the
 [releases page](https://github.com/zxkodas/TickFence/releases), run it, and
 accept the Windows prompt. It asks for Administrator once, then does
 everything below for you. It is **not code-signed**, so SmartScreen will warn
