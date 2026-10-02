@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const T = window.TickFenceT || { t: (en) => en };
 const t = T.t;
 
-const VERSION = "1.3";
+const VERSION = "1.4";
 
 function setState(kind, title, detail) {
   $("dot").className = "dot " + kind;

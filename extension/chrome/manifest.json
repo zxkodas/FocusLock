@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TickFence — bloqueo de sitios",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Bloquea los dominios configurados mientras TickFence esté bloqueando.",
   "permissions": [
     "declarativeNetRequest",

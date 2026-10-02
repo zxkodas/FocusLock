@@ -5,6 +5,15 @@ Every release, what changed and where. Newest first.
 Versions follow [semver](https://semver.org/). The browser extension has its own
 numbering (`extension/*/manifest.json`) and changes independently of the app.
 
+## Unreleased
+
+### Extension
+
+- **`extension/chrome/manifest.json`, `extension/firefox/manifest.json`,
+  `extension/*/popup.js`** — version to **1.4.0**, ready for an addons.mozilla.org
+  submission under the new add-on id. No source change since 1.3.1; the version is
+  new because AMO rejects a re-upload of a version it already has.
+
 ## [1.1.1] — 2026-10-02
 
 ### Fixed
