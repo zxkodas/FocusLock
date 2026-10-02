@@ -467,6 +467,12 @@ price of TickTick not exposing the completed state of a recurring task.
 
 ---
 
+## 📋 Changelog
+
+What changed in each version, and in which file: [`CHANGELOG.md`](CHANGELOG.md).
+
+---
+
 ## 📜 License
 
 **GPL-3.0-or-later.** See [`LICENSE`](LICENSE).

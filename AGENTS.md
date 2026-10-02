@@ -4,17 +4,25 @@ Working notes for this repo. Read before changing code.
 
 ## Releases
 
-**Release notes list the changes and only what matters.** The user asked for
-this explicitly after the 1.1.0 notes. Concretely:
+**`CHANGELOG.md` is the source of truth** and is updated on every release: each
+version, what changed, which file. Release notes are written from it.
 
-- A bulleted list of what changed since the previous version, worst first.
-- Only things a user can act on or would be surprised by: an unsigned binary, a
-  signature they have to get, a known caveat.
-- No narrative of how the work went, no history of the debugging, no thanks.
-- Keep it short. A release with one fix gets a couple of lines, not a page.
+**Release notes: the changes, named by file, and only what matters.** The user
+asked for this after the 1.1.0 notes, then refined it: not too little. So:
 
-Do not put the commit-message story in the release notes. The commit message is
-where the reasoning goes.
+- Group by file. `**focuslock/reset.py**` — what was wrong, what it does now.
+  "What changed and where", not a narrative.
+- Two or three files is typical. If it takes more than a screen, the change was
+  too big for one version.
+- Only what the user can act on or would be surprised by: unsigned binary, an
+  extension not signed yet, a known caveat.
+- No story of how the debugging went. No thanks. The commit message is where the
+  reasoning goes.
+- Close with a pointer to `CHANGELOG.md`.
+
+**Do not tell the user to go sign the extension.** The maintainer signs it, out
+of band, through addons.mozilla.org. The note says the `.xpi` is not signed yet
+and is therefore not attached. Nothing about AMO IDs or steps.
 
 Before tagging, check that `master` has nothing the tag will not include:
 `git log <tag>..master`. If it is non-empty, the published `.exe` is behind the
