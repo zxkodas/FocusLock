@@ -5,7 +5,8 @@
   "description": "Bloquea los dominios configurados mientras TickFence esté bloqueando.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "tickfence-agus@users.noreply.github.com",
+      "id": "focuslock-agus@users.noreply.github.com",
+      "_id_nota": "Dice focuslock a proposito, no es un olvido del rename. El add-on se creo en AMO antes de pasar a TickFence, y los IDs de AMO son permanentes: cambiarlo obliga a crear un listing nuevo, sin reseñas, y los que ya tienen la instalada no se actualizan solos porque para Firefox serian dos add-ons distintos. Ademas AMO rechaza la subida si el id del manifest no coincide con el que tiene registrado, y el suyo sigue siendo el viejo. El id no se ve al instalar: lo que se muestra es el name de arriba, que si dice TickFence.",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]

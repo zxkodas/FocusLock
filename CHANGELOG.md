@@ -11,8 +11,14 @@ numbering (`extension/*/manifest.json`) and changes independently of the app.
 
 - **`extension/chrome/manifest.json`, `extension/firefox/manifest.json`,
   `extension/*/popup.js`** — version to **1.4.0**, ready for an addons.mozilla.org
-  submission under the new add-on id. No source change since 1.3.1; the version is
-  new because AMO rejects a re-upload of a version it already has.
+  submission. No source change since 1.3.1; the version is new because AMO rejects
+  a re-upload of a version it already holds.
+- **`extension/firefox/manifest.json`** — `gecko.id` stays
+  `focuslock-agus@users.noreply.github.com`. The add-on was created on AMO before
+  the rename and AMO ids are permanent, so a `tickfence-` id would mean a new
+  listing with no reviews and no in-place updates for existing installs. AMO also
+  rejects an upload whose manifest id differs from the one it has on file. The id
+  is not shown to users; the manifest `name` is what appears in the browser.
 
 ## [1.1.1] — 2026-10-02
 
