@@ -2,6 +2,29 @@
 
 Working notes for this repo. Read before changing code.
 
+## Releases
+
+**Release notes list the changes and only what matters.** The user asked for
+this explicitly after the 1.1.0 notes. Concretely:
+
+- A bulleted list of what changed since the previous version, worst first.
+- Only things a user can act on or would be surprised by: an unsigned binary, a
+  signature they have to get, a known caveat.
+- No narrative of how the work went, no history of the debugging, no thanks.
+- Keep it short. A release with one fix gets a couple of lines, not a page.
+
+Do not put the commit-message story in the release notes. The commit message is
+where the reasoning goes.
+
+Before tagging, check that `master` has nothing the tag will not include:
+`git log <tag>..master`. If it is non-empty, the published `.exe` is behind the
+code. That is how the 1.1.0 `.exe` shipped with the `reset` bug fixed only on
+master.
+
+Bump the version in `pyproject.toml` and `installer/TickFence.iss` together;
+`tests/test_installer.py` fails if they diverge. The browser extension has its
+own numbering and is not touched.
+
 ## What this is
 
 A Windows focus blocker. It locks chosen programs and websites until the user
