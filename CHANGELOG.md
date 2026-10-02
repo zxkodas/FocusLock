@@ -9,16 +9,26 @@ numbering (`extension/*/manifest.json`) and changes independently of the app.
 
 ### Extension
 
+- **1.4.0 is signed and installable.** The signed `.xpi` is linked from the
+  README. The listing is unlisted, so it does not appear in addons.mozilla.org
+  search; the README link is the way in.
 - **`extension/chrome/manifest.json`, `extension/firefox/manifest.json`,
-  `extension/*/popup.js`** — version to **1.4.0**, ready for an addons.mozilla.org
-  submission. No source change since 1.3.1; the version is new because AMO rejects
-  a re-upload of a version it already holds.
+  `extension/*/popup.js`** — version to **1.4.0**. No source change since 1.3.1;
+  the version is new because AMO rejects a re-upload of a version it already
+  holds.
 - **`extension/firefox/manifest.json`** — `gecko.id` stays
   `focuslock-agus@users.noreply.github.com`. The add-on was created on AMO before
   the rename and AMO ids are permanent, so a `tickfence-` id would mean a new
   listing with no reviews and no in-place updates for existing installs. AMO also
   rejects an upload whose manifest id differs from the one it has on file. The id
   is not shown to users; the manifest `name` is what appears in the browser.
+
+### Known
+
+- A user updating from the old FocusLock build keeps a 30-second alarm under the
+  old `focuslock-poll` name. The code only acts on `tickfence-poll`, so it fires
+  and does nothing, waking the background page for nothing. Clearing it on
+  install is the fix and lands in a later extension version.
 
 ## [1.1.1] — 2026-10-02
 

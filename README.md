@@ -208,16 +208,22 @@ navegador*. It looks like `http://127.0.0.1:47821/state?token=…`.
 
 **Firefox**
 
-Firefox refuses unsigned add-ons, so pick one:
+Download the signed add-on (version 1.4.0):
 
-- **Signed (recommended)** — this build is already signed. Install the `.xpi`
-  with *Install Add-on From File*. **Permanent:** it survives browser
-  restarts and updates. Signing goes through
-  [addons.mozilla.org](https://addons.mozilla.org/developers/), and it
-  covers one version at a time, so future changes need a new submission.
-- **Temporary (development)** — `about:debugging#/runtime/this-firefox` →
-  *Load Temporary Add-on* → `extension/firefox/manifest.json`. **Removed every
-  time you close the browser**, so it is only for testing.
+<https://addons.mozilla.org/firefox/downloads/file/5079476/2c8d26177e6d412ebd94-1.4.0.xpi>
+
+Install it with *Install Add-on From File*. **Permanent:** it survives browser
+restarts and updates. The listing is currently unlisted, so it will not appear
+when searching on addons.mozilla.org — the link above is how you get it.
+
+Signing goes through [addons.mozilla.org](https://addons.mozilla.org/developers/)
+and covers one version at a time, so any change to the extension needs a new
+submission.
+
+To work on the extension instead of installing the signed one:
+`about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* →
+`extension/firefox/manifest.json`. That one is **removed every time you close
+the browser**, so it is only for testing.
 
 After changing the extension, rebuild the package with:
 
