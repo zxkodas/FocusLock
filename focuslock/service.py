@@ -152,6 +152,26 @@ def _is_installed() -> bool:
         return False
 
 
+def is_running() -> bool:
+    """El servicio esta arrancado ahora.
+
+    Lo necesita reset: sin esto no se puede saber si el estado que se acaba de
+    escribir va a sobrevivir o lo va a pisar el servicio con lo que tiene en
+    memoria.
+    """
+    if not _is_installed():
+        return False
+    try:
+        handle = win32service.OpenService(
+            win32service.OpenSCManager(None, None, win32service.SC_MANAGER_CONNECT),
+            paths.SERVICE_NAME,
+            win32service.SERVICE_QUERY_STATUS,
+        )
+        return win32service.QueryServiceStatus(handle)[1] == win32service.SERVICE_RUNNING
+    except Exception:
+        return False
+
+
 def start(timeout: float = 20.0) -> bool:
     """Arranca el servicio y espera a que quede en RUNNING.
 

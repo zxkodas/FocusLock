@@ -9,6 +9,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -1264,6 +1265,109 @@ class TestConfigRoundTrip(unittest.TestCase):
             self.assertEqual(again.get("programs")["blocked"], [])
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class _ServicioFalso:
+    """Doble del servicio, con la falla que importa.
+
+    service.stop() NO lanza excepcion cuando no puede parar el servicio: agota el
+    tiempo de espera y devuelve. Un doble que solo implemente stop() lanzando
+    excepcion reproduciria el bug equivocado, y por eso este tiene un flag.
+    """
+
+    def __init__(self, corriendo=True, puede_parar=True, instalado=True):
+        self.corriendo = corriendo
+        self.puede_parar = puede_parar
+        self.instalado = instalado
+        self.paradas = 0
+
+    def is_running(self):
+        return self.corriendo
+
+    def _is_installed(self):
+        return self.instalado
+
+    def stop(self, timeout=15.0):
+        self.paradas += 1
+        if self.puede_parar:
+            self.corriendo = False
+
+    def start(self, timeout=20.0):
+        self.corriendo = True
+        return True
+
+
+class TestResetFallaSinElServicioParado(unittest.TestCase):
+    """reset no puede decir "Listo" si el servicio sigue vivo.
+
+    El reset escribe el estado y el servicio lo sobreescribe con lo que tiene en
+    memoria. Pasa siempre, en ~14 segundos, y el comando igual imprimia "Listo".
+    Un test normal no lo caza: hay que dejar el servicio fijo en RUNNING.
+    """
+
+    def test_stop_que_no_lanza_no_alcanza_para_aber_si_paro(self):
+        from focuslock.reset import _detener_servicio
+
+        parado, motivo = _detener_servicio(_ServicioFalso(puede_parar=False))
+        self.assertFalse(
+            parado,
+            "stop() no lanza excepcion: hay que preguntar despues si quedo "
+            "parado. Sin esto el reset cree que frene el servicio y no frena nada",
+        )
+        self.assertIn("RUNNING", motivo)
+
+    def test_detener_falla_si_stop_lanza(self):
+        from focuslock.reset import _detener_servicio
+
+        class _Explota(_ServicioFalso):
+            def stop(self, timeout=15.0):
+                raise PermissionError("Acceso denegado.")
+
+        parado, motivo = _detener_servicio(_Explota())
+        self.assertFalse(parado)
+        self.assertIn("Acceso denegado", motivo)
+
+    def test_detener_exito_cuando_frena(self):
+        from focuslock.reset import _detener_servicio
+
+        parado, motivo = _detener_servicio(_ServicioFalso())
+        self.assertTrue(parado, f"motivo: {motivo}")
+
+    def test_sin_el_servicio_parado_no_escribe_nada(self):
+        """Lo que importa: no tocar el archivo si el efecto se va a perder."""
+        import tempfile
+
+        from focuslock.reset import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            raiz = Path(tmp)
+            st = raiz / "state.json"
+            (raiz / "config.json").write_text(
+                '{"general": {}, "programs": {}}', encoding="utf-8")
+            original = '{"locked": true, "credits": 7}'
+            st.write_text(original, encoding="utf-8")
+
+            with mock.patch("focuslock.service.is_running",
+                            return_value=True), \
+                 mock.patch("focuslock.service.stop"), \
+                 mock.patch("focuslock.service._is_installed",
+                            return_value=True), \
+                 mock.patch("focuslock.reset.reset") as reset_falso, \
+                 mock.patch("focuslock.ifeo.list_blocked", return_value=[]):
+                codigo = main()
+
+            self.assertNotEqual(
+                0, codigo,
+                "tiene que salir con error cuando el servicio sigue vivo",
+            )
+            self.assertFalse(
+                reset_falso.called,
+                "no debe escribir nada: el servicio lo sobreescribe igual",
+            )
+            self.assertEqual(
+                original, st.read_text(encoding="utf-8"),
+                "el archivo de estado quedo tocado sin efecto",
+            )
 
 
 if __name__ == "__main__":
